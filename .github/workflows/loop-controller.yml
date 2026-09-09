@@ -1,0 +1,107 @@
+name: loop-controller
+
+# This workflow controls the agentic development loop
+on:
+  workflow_run:
+    workflows:
+      - loop-leg-stub
+    types:
+      - completed
+
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: Task identifier
+        required: true
+        type: string
+      fixture:
+        description: Phase 1 only - scripted verdict sequence for the stub leg
+        required: false
+        type: string
+        default: fail-fail-pass
+
+concurrency:
+  group: loop-controller
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout controller sources
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: controller
+          sparse-checkout: .github/tools
+
+      - name: Checkout ledger
+        uses: actions/checkout@v4
+        with:
+          ref: loop-state
+          path: state
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Download verdict from triggering run
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: verdict
+          path: verdict
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide
+        id: decide
+        run: |
+          node controller/.github/tools/loop-decide.mjs \
+            --verdict "${{ github.event_name == 'workflow_run' && 'verdict/verdict.json' || 'none' }}" \
+            --task-id "${{ inputs.task_id }}" \
+            --state-dir state \
+            > decision.json
+          echo: "decision=$(jq -r .decision decision.json)" >> "$GITHUB_OUTPUT"
+          echo: "next_leg=$(jq -r .next_leg decision.json)" >> "$GITHUB_OUTPUT"
+          echo: "task_id=$(jq -r .task_id decision.json)"   >> "$GITHUB_OUTPUT"
+          echo: "attempt=$(jq -r .attempt decision.json)"   >> "$GITHUB_OUTPUT"
+          jq . decision.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit ledger
+        working-directory: state
+        run: |
+          git config user.name "loop-controller"
+          git config user.email "loop-controller@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet && exit 0
+          git commit -m "${{ steps.decide.outputs.task_id }} attempt ${{ steps.decide.outputs.attempt }}: ${{ steps.decide.outputs.decision }}"
+          git push origin loop-state
+
+      - name: Dispatch next leg
+        if: steps.decide.outputs.decision == 'run'
+        env:
+          GH_TOKEN: ${{ secrets.LOOP_DISPATCH_TOKEN }}
+        run: |
+          gh workflow run "${{ steps.decide.outputs.next_leg }}" \
+            --repo "${{ github.repository }}" \
+            --ref "${{ github.event.repository.default_branch }}" \
+            -f task_id="${{ steps.decide.outputs.task_id }}" \
+            -f attempt="${{ steps.decide.outputs.attempt }}" \
+            -f fixture="${{ inputs.fixture }}"
+
+      - name: Halt
+        if: steps.decide.outputs.decision != 'run'
+        run: |
+          echo "Loop halted: ${{ steps.decide.outputs.decision }}"
+          jq -r .reason decision.json
+          [ "${{ steps.decide.outputs.decision }}" = "pass" ]
