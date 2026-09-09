@@ -4,9 +4,15 @@
   "fixture": "breaker-repeat",
   "status": "running",
   "current_leg": "stub",
-  "total": 1,
-  "cycles": {},
-  "signatures": {},
+  "total": 2,
+  "cycles": {
+    "stub<-stub": 1
+  },
+  "signatures": {
+    "stub": [
+      "stub:1test:0196128acc6a"
+    ]
+  },
   "history": [
     {
       "at": "2026-09-09T18:48:29.486Z",
@@ -17,6 +23,16 @@
       "decision": "run",
       "reason": "task started",
       "run_id": null
+    },
+    {
+      "at": "2026-09-09T18:48:55.104Z",
+      "attempt": 1,
+      "leg": "stub",
+      "outcome": "fail",
+      "signature": "stub:1test:0196128acc6a",
+      "decision": "run",
+      "reason": "stub reported fail; routing backward to stub",
+      "run_id": "34391273230"
     }
   ]
 }
