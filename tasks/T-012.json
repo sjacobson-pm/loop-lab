@@ -4,13 +4,14 @@
   "fixture": "fail-fail-pass",
   "status": "running",
   "current_leg": "stub",
-  "total": 2,
+  "total": 3,
   "cycles": {
-    "stub<-stub": 1
+    "stub<-stub": 2
   },
   "signatures": {
     "stub": [
-      "stub:1test:0196128acc6a"
+      "stub:1test:0196128acc6a",
+      "stub:1test:f715482682e5"
     ]
   },
   "history": [
@@ -33,6 +34,16 @@
       "decision": "run",
       "reason": "stub reported fail; routing backward to stub",
       "run_id": "34390964846"
+    },
+    {
+      "at": "2026-09-09T18:46:15.970Z",
+      "attempt": 2,
+      "leg": "stub",
+      "outcome": "fail",
+      "signature": "stub:1test:f715482682e5",
+      "decision": "run",
+      "reason": "stub reported fail; routing backward to stub",
+      "run_id": "34391005673"
     }
   ]
 }
