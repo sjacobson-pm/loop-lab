@@ -4,14 +4,15 @@
   "fixture": "budget-exhaust",
   "status": "running",
   "current_leg": "stub",
-  "total": 3,
+  "total": 4,
   "cycles": {
-    "stub<-stub": 2
+    "stub<-stub": 3
   },
   "signatures": {
     "stub": [
       "stub:1test:9a3ebfdfa52a",
-      "stub:1test:8a0832b09ee3"
+      "stub:1test:8a0832b09ee3",
+      "stub:1test:b219e6aaca43"
     ]
   },
   "history": [
@@ -44,6 +45,16 @@
       "decision": "run",
       "reason": "stub reported fail; routing backward to stub",
       "run_id": "34391558898"
+    },
+    {
+      "at": "2026-09-09T18:52:26.717Z",
+      "attempt": 3,
+      "leg": "stub",
+      "outcome": "fail",
+      "signature": "stub:1test:b219e6aaca43",
+      "decision": "run",
+      "reason": "stub reported fail; routing backward to stub",
+      "run_id": "34391604519"
     }
   ]
 }
