@@ -2,17 +2,18 @@
   "task_id": "T-014",
   "created_at": "2026-09-09T18:50:49.986Z",
   "fixture": "budget-exhaust",
-  "status": "running",
+  "status": "fail",
   "current_leg": "stub",
   "total": 4,
   "cycles": {
-    "stub<-stub": 3
+    "stub<-stub": 4
   },
   "signatures": {
     "stub": [
       "stub:1test:9a3ebfdfa52a",
       "stub:1test:8a0832b09ee3",
-      "stub:1test:b219e6aaca43"
+      "stub:1test:b219e6aaca43",
+      "stub:1test:be6910647ce5"
     ]
   },
   "history": [
@@ -55,6 +56,16 @@
       "decision": "run",
       "reason": "stub reported fail; routing backward to stub",
       "run_id": "34391604519"
+    },
+    {
+      "at": "2026-09-09T18:53:04.827Z",
+      "attempt": 4,
+      "leg": "stub",
+      "outcome": "fail",
+      "signature": "stub:1test:be6910647ce5",
+      "decision": "fail",
+      "reason": "cycle stub<-stub exhausted after 3 repairs",
+      "run_id": "34391682712"
     }
   ]
 }
