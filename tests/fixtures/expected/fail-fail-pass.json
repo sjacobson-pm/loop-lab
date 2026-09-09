@@ -1,0 +1,39 @@
+{
+    "fixture": "fail-fail-pass",
+    "description": "Two distinct failures then success. Proves the loop iterates and that next_attempt advances. Classes A and B must differ or the breaker fires before the pass.",
+    "status": "pass",
+    "total": 3,
+    "cycles": {
+        "stub<-stub": 2
+    },
+    "history": [
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": null,
+            "decision": "run",
+            "signature_class": null
+        },
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "run",
+            "signature_class": "A"
+        },
+        {
+            "attempt": 2,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "run",
+            "signature_class": "B"
+        },
+        {
+            "attempt": 3,
+            "leg": "stub",
+            "outcome": "pass",
+            "decision": "pass",
+            "signature_class": null
+        }
+    ]
+}

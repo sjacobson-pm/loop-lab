@@ -1,0 +1,46 @@
+{
+    "fixture": "budget-exhaust",
+    "description": "Four distinct failures. Cycle budget of 3 halts on the fourth request. cycles records repairs performed, so it reads 3 and never exceeds the budget.",
+    "status": "fail",
+    "total": 4,
+    "cycles": {
+        "stub<-stub": 3
+    },
+    "history": [
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": null,
+            "decision": "run",
+            "signature_class": null
+        },
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "run",
+            "signature_class": "A"
+        },
+        {
+            "attempt": 2,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "run",
+            "signature_class": "B"
+        },
+        {
+            "attempt": 3,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "run",
+            "signature_class": "C"
+        },
+        {
+            "attempt": 4,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "fail",
+            "signature_class": "D"
+        }
+    ]
+}

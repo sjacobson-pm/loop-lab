@@ -1,0 +1,23 @@
+{
+    "fixture": "pass",
+    "description": "Shortest path: one leg, immediate success.",
+    "status": "pass",
+    "total": 1,
+    "cycles": {},
+    "history": [
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": null,
+            "decision": "run",
+            "signature_class": null
+        },
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": "pass",
+            "decision": "pass",
+            "signature_class": null
+        }
+    ]
+}

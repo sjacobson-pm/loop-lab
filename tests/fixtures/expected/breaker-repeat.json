@@ -1,0 +1,32 @@
+{
+    "fixture": "breaker-repeat",
+    "description": "Identical failure twice. Breaker halts before the cycle budget is near spent. The fixture's third entry must never be emitted.",
+    "status": "breaker",
+    "total": 2,
+    "cycles": {
+        "stub<-stub": 1
+    },
+    "history": [
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": null,
+            "decision": "run",
+            "signature_class": null
+        },
+        {
+            "attempt": 1,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "run",
+            "signature_class": "A"
+        },
+        {
+            "attempt": 2,
+            "leg": "stub",
+            "outcome": "fail",
+            "decision": "breaker",
+            "signature_class": "A"
+        }
+    ]
+}
