@@ -36,7 +36,7 @@ const { values: args } = parseArgs({
     "state-dir": { type: "string" },
     "task-id": { type: "string", default: "" },
     config: { type: "string", default: ".loop/legs.json" },
-    controller_run_id: args["controller-run-id"] || null,
+    "controller-run-id": { type: "string", default: "" },
     "run-id": { type: "string", default: "" },
     fixture: { type: "string", default: "" },
   },
@@ -202,6 +202,7 @@ if (fresh) {
     decision: "run",
     reason: "task started",
     run_id: args["run-id"] || null,
+    controller_run_id: args["controller-run-id"] || null,
   });
   save(path, ledger);
 
@@ -254,6 +255,7 @@ function conclude(decision, reason, nextLeg = null) {
     decision,
     reason,
     run_id: args["run-id"] || null,
+    controller_run_id: args["controller-run-id"] || null,
   });
 
   if (signature) {
