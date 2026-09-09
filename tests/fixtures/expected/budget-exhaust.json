@@ -2,7 +2,7 @@
     "fixture": "budget-exhaust",
     "description": "Four distinct failures. Cycle budget of 3 halts on the fourth request. cycles records repairs performed, so it reads 3 and never exceeds the budget.",
     "status": "fail",
-    "total": 5,
+    "total": 4,
     "cycles": {
         "stub<-stub": 3
     },
