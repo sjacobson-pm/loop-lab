@@ -1,0 +1,13 @@
+{
+    "name": "pass",
+    "description": "Immediate success. Shortest path through the loop.",
+    "expect": [
+        "pass"
+    ],
+    "entries": [
+        {
+            "outcome": "pass",
+            "facts": {}
+        }
+    ]
+}

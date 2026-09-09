@@ -1,0 +1,35 @@
+{
+    "name": "fail-fail-pass",
+    "description": "Two distinct failures then success. Signatures must differ or the breaker fires before reaching the pass.",
+    "expect": [
+        "run",
+        "run",
+        "pass"
+    ],
+    "entries": [
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsUp"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 3 but was 2 at /home/runner/work/loop-lab/src/Rounding.cs:47 (took 1.2s)"
+            }
+        },
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsUp"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 3 but was 4 at /home/runner/work/loop-lab/src/Rounding.cs:47 (took 0.9s)"
+            }
+        },
+        {
+            "outcome": "pass",
+            "facts": {}
+        }
+    ]
+}

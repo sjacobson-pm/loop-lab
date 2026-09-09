@@ -1,0 +1,65 @@
+name: loop-leg-stub
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: Task identifier
+        required: true
+        type: string
+      attempt:
+        description: Which fixture entry to emit (1-based)
+        required: true
+        type: string
+      fixture:
+        description: Name of the sequence under tests/fixtures/sequences
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run-leg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fixtures
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tests/fixtures/sequences
+
+      - name: Emit verdict
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          ATTEMPT: ${{ inputs.attempt }}
+          FIXTURE: ${{ inputs.fixture }}
+        run: |
+          set -euo pipefail
+
+          FILE="test/fixtures/sequences/${FIXTURE}.json"
+          if [ ! -f "$FILE" ]; then
+              echo "::error::no fixture named '$FIXTURE}' at ${FILE}"
+              exit 1
+          fi
+
+          COUNT=$(jq '.entries | length' "$FILE")
+
+          if [ "$ATTEMPT" -gt "$COUNT" ]; then
+              echo "::error::attempt ${ATTEMPT} exceeds ${COUNT} entries in '${FIXTURE}'"
+              exit 1
+          fi
+
+          jq --arg task "$TASK_ID" --argjson n "$ATTEMPT" \
+              '.entries[$n -1] + { task_id: $task, attempt: $n, leg: "stub" }' \
+              "$FILE" > verdict.json
+
+          echo "### stub leg: ${FIXTURE} entry ${ATTEMPT}/${COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          jq . verdict.json | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload verdict
+        uses: actions/upload-artifact@v4
+        with:
+          name: verdict
+          path: verdict.json
+          retention-days: 7

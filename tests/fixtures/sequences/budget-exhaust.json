@@ -1,0 +1,52 @@
+{
+    "name": "budget-exhaust",
+    "description": "Four distinct failures. Cycle budget of 3 must halt on entry 4 without the breaker firing.",
+    "expect": [
+        "run",
+        "run",
+        "run",
+        "fail"
+    ],
+    "entries": [
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsA"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 3 but was 2 at /home/runner/work/loop-lab/src/Rounding.cs:47"
+            }
+        },
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsB"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 5 but was 4 at /home/runner/work/loop-lab/src/Rounding.cs:51"
+            }
+        },
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsC"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 7 but was 6 at /home/runner/work/loop-lab/src/Rounding.cs:55"
+            }
+        },
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsD"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 9 but was 8 at /home/runner/work/loop-lab/src/Rounding.cs:59"
+            }
+        }
+    ]
+}

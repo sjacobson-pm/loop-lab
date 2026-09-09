@@ -207,6 +207,7 @@ if (fresh) {
   emit({
     task_id: taskId,
     attempt: 1,
+    next_attempt: 1,
     decision: "run",
     next_leg: config.legs[entry].workflow,
     signature: null,
@@ -266,6 +267,7 @@ function conclude(decision, reason, nextLeg = null) {
   emit({
     task_id: taskId,
     attempt,
+    next_attempt: decision === "run" ? ledger.total : null,
     decision,
     next_leg: decision === "run" ? config.legs[nextLeg].workflow : null,
     signature,

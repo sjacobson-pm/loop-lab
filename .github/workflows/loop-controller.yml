@@ -90,6 +90,7 @@ jobs:
           echo "next_leg=$(jq -r .next_leg decision.json)" >> "$GITHUB_OUTPUT"
           echo "task_id=$(jq -r .task_id decision.json)"   >> "$GITHUB_OUTPUT"
           echo "attempt=$(jq -r .attempt decision.json)"   >> "$GITHUB_OUTPUT"
+          echo "next_attempt=$(jq -r .next_attempt decision.json)" >> "$GITHUB_OUTPUT"
           jq . decision.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit ledger
@@ -112,7 +113,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --ref "${{ github.event.repository.default_branch }}" \
             -f task_id="${{ steps.decide.outputs.task_id }}" \
-            -f attempt="${{ steps.decide.outputs.attempt }}" \
+            -f attempt="${{ steps.decide.outputs.next_attempt }}" \
             -f fixture="$FIXTURE"
 
       - name: Halt

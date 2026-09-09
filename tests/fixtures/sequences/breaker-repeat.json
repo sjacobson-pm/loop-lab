@@ -1,0 +1,35 @@
+{
+    "name": "breaker-repeat",
+    "description": "Identical failure twice. Breaker must fire on entry 2 and the third entry must never be reached.",
+    "expect": [
+        "run",
+        "breaker"
+    ],
+    "entries": [
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsUp"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 3 but was 2 at /home/runner/work/loop-lab/src/Rounding.cs:47 (took 1.2s)"
+            }
+        },
+        {
+            "outcome": "fail",
+            "facts": {
+                "failing_tests": [
+                    "Rounding.CeilingToTests.RoundsUp"
+                ],
+                "error_kind": "assertion",
+                "error_text": "Expected 3 but was 2 at /home/runner/work/loop-lab/src/Rounding.cs:112 (took 5.4s)"
+            }
+        },
+        {
+            "outcome": "pass",
+            "facts": {},
+            "_note": "unreachable: if the stub emits this, the breaker did not fire"
+        }
+    ]
+}
