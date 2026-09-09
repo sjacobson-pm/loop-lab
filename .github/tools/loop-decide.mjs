@@ -36,6 +36,7 @@ const { values: args } = parseArgs({
     "state-dir": { type: "string" },
     "task-id": { type: "string", default: "" },
     config: { type: "string", default: ".loop/legs.json" },
+    controller_run_id: args["controller-run-id"] || null,
     "run-id": { type: "string", default: "" },
     fixture: { type: "string", default: "" },
   },
@@ -303,15 +304,17 @@ if (!config.legs[transition.to])
 // 3. Budgets. Forward progress is free; only repair cycles are charged.
 if (transition.kind === "backward") {
   const key = `${transition.to}<-${transition.from}`;
-  const used = (ledger.cycles[key] ?? 0) + 1;
+  const used = ledger.cycles[key] ?? 0;
   ledger.cycles[key] = used;
 
-  if (used > config.budgets.cycle) {
+  if (used >= config.budgets.cycle) {
     conclude(
       "fail",
       `cycle ${key} exhausted after ${config.budgets.cycle} repairs`,
     );
   }
+
+  ledger.cycles[key] = used + 1;
 }
 
 // Backstop against oscillation that no single cycle counter would catch.

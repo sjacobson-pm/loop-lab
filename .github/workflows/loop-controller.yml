@@ -71,6 +71,7 @@ jobs:
           node controller/.github/tools/loop-decide.mjs \
             --fixture "${{ inputs.fixture }}" \
             --task-id "${{ inputs.task_id }}" \
+            --controller-run-id "${{ github.run_id }}" \
             --config controller/.loop/legs.json \
             --state-dir state > decision.json
 
@@ -79,6 +80,7 @@ jobs:
         run: |
           node controller/.github/tools/loop-decide.mjs \
             --verdict verdict/verdict.json \
+            --controller-run-id "${{ github.run_id }}" \
             --run-id "${{ github.event.workflow_run.id }}" \
             --config controller/.loop/legs.json \
             --state-dir state > decision.json
