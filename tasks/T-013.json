@@ -2,7 +2,7 @@
   "task_id": "T-013",
   "created_at": "2026-09-09T18:48:29.486Z",
   "fixture": "breaker-repeat",
-  "status": "running",
+  "status": "breaker",
   "current_leg": "stub",
   "total": 2,
   "cycles": {
@@ -10,6 +10,7 @@
   },
   "signatures": {
     "stub": [
+      "stub:1test:0196128acc6a",
       "stub:1test:0196128acc6a"
     ]
   },
@@ -33,6 +34,16 @@
       "decision": "run",
       "reason": "stub reported fail; routing backward to stub",
       "run_id": "34391273230"
+    },
+    {
+      "at": "2026-09-09T18:49:24.923Z",
+      "attempt": 2,
+      "leg": "stub",
+      "outcome": "fail",
+      "signature": "stub:1test:0196128acc6a",
+      "decision": "breaker",
+      "reason": "signature stub:1test:0196128acc6a already seen at stub occurrence 1",
+      "run_id": "34391313657"
     }
   ]
 }
