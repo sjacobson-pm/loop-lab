@@ -1,0 +1,43 @@
+name: check-loop
+
+# Guards the controller's decision logic. Runs the committed baselines against
+# loop-decide.mjs on every change to the loop's brain or its fixtures.
+#
+# Deliberately plain Actions: this gate must not be reachable by any agent.
+
+on:
+  pull_request:
+    paths:
+      - ".github/tools/loop-decide.mjs"
+      - ".github/tools/check-loop.mjs"
+      - ".loop/legs.json"
+      - "tests/fixtures/**"
+      - ".github/workflows/check-loop.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/tools/loop-decide.mjs"
+      - ".github/tools/check-loop.mjs"
+      - ".loop/legs.json"
+      - "tests/fixtures/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Run loop regression suite
+        shell: bash
+        run: |
+          set -o pipefail
+          node .github/tools/check-loop.mjs | tee -a "$GITHUB_STEP_SUMMARY"
