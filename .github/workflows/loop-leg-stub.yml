@@ -37,9 +37,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          FILE="test/fixtures/sequences/${FIXTURE}.json"
+          FILE="tests/fixtures/sequences/${FIXTURE}.json"
           if [ ! -f "$FILE" ]; then
-              echo "::error::no fixture named '$FIXTURE}' at ${FILE}"
+              echo "::error::no fixture named '${FIXTURE}' at ${FILE}"
               exit 1
           fi
 
