@@ -42,7 +42,9 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
           path: controller
-          sparse-checkout: .github/tools
+          sparse-checkout: |
+            .github/tools
+            .loop
 
       - name: Checkout ledger
         uses: actions/checkout@v4
@@ -63,18 +65,31 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Decide
-        id: decide
+      - name: Decide (start)
+        if: github.event_name == 'workflow_dispatch'
         run: |
           node controller/.github/tools/loop-decide.mjs \
-            --verdict "${{ github.event_name == 'workflow_run' && 'verdict/verdict.json' || 'none' }}" \
+            --fixture "${{ inputs.fixture }}" \
             --task-id "${{ inputs.task_id }}" \
-            --state-dir state \
-            > decision.json
-          echo: "decision=$(jq -r .decision decision.json)" >> "$GITHUB_OUTPUT"
-          echo: "next_leg=$(jq -r .next_leg decision.json)" >> "$GITHUB_OUTPUT"
-          echo: "task_id=$(jq -r .task_id decision.json)"   >> "$GITHUB_OUTPUT"
-          echo: "attempt=$(jq -r .attempt decision.json)"   >> "$GITHUB_OUTPUT"
+            --config controller/.loop/legs.json \
+            --state-dir state > decision.json
+
+      - name: Decide (continue)
+        if: github.event_name == 'workflow_run'
+        run: |
+          node controller/.github/tools/loop-decide.mjs \
+            --verdict verdict/verdict.json \
+            --run-id "${{ github.event.workflow_run.id }}" \
+            --config controller/.loop/legs.json \
+            --state-dir state > decision.json
+
+      - name: Decide (read)
+        id: decide
+        run: |
+          echo "decision=$(jq -r .decision decision.json)" >> "$GITHUB_OUTPUT"
+          echo "next_leg=$(jq -r .next_leg decision.json)" >> "$GITHUB_OUTPUT"
+          echo "task_id=$(jq -r .task_id decision.json)"   >> "$GITHUB_OUTPUT"
+          echo "attempt=$(jq -r .attempt decision.json)"   >> "$GITHUB_OUTPUT"
           jq . decision.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit ledger
@@ -92,12 +107,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.LOOP_DISPATCH_TOKEN }}
         run: |
+          FIXTURE=$(jq -r '.fixture // ""' "state/tasks/${{ steps.decide.outputs.task_id }}.json")
           gh workflow run "${{ steps.decide.outputs.next_leg }}" \
             --repo "${{ github.repository }}" \
             --ref "${{ github.event.repository.default_branch }}" \
             -f task_id="${{ steps.decide.outputs.task_id }}" \
             -f attempt="${{ steps.decide.outputs.attempt }}" \
-            -f fixture="${{ inputs.fixture }}"
+            -f fixture="$FIXTURE"
 
       - name: Halt
         if: steps.decide.outputs.decision != 'run'
