@@ -140,11 +140,13 @@ The file must be valid JSON with this shape:
    reference; the spec is the source. A task `summary` describes work, not
    the criterion.
 
-3. **Every criterion lists at least one task** in `tasks`, and every task id
-   listed resolves to an entry in the top-level `tasks` array.
+3. **Every criterion lists at least one task**, and every task id listed
+   resolves to an entry in the top-level `tasks` array.
 
-4. **Every task is referenced by at least one criterion.** A task no
-   criterion needs is scope creep.
+4. **Every criterion owns at least one task that no other criterion lists.**
+   A plan where every criterion points at the same tasks says nothing about
+   which work discharges which criterion. Decompose until each criterion has
+   work that is uniquely its own.
 
 5. **`coverage` is `primary` for every criterion.** This story lives in one
    repository, so nothing is inherited.
@@ -176,3 +178,4 @@ Valid `reason_code` values: `missing_anchor`, `contradictory_criteria`,
 
 Report being blocked rather than guessing. A plan built on a criterion you
 could not verify is worse than no plan.
+

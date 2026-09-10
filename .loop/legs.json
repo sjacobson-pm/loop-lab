@@ -45,12 +45,12 @@
                 "facts": {
                     "_comment": "The planner fails when it cannot produce a plan at all, not when the plan is wrong. Checking is the checker's job.",
                     "required": [
-                        "blocked_criteria",
-                        "reason_code"
+                        "at_fault_criteria",
+                        "reason_codes"
                     ],
                     "signature": [
-                        "blocked_criteria",
-                        "reason_code"
+                        "at_fault_criteria",
+                        "reason_codes"
                     ],
                     "normalize": "identifiers"
                 }
@@ -88,11 +88,13 @@
                 "facts": {
                     "_comment": "Implementer failure means it could not proceed - scope violation, missing contract, dispute raised. Test failures belong to verify.",
                     "required": [
-                        "reason_code",
+                        "at_fault_criteria",
+                        "reason_codes",
                         "disputed_criteria"
                     ],
                     "signature": [
-                        "reason_code",
+                        "at_fault_criteria",
+                        "reason_codes",
                         "disputed_criteria"
                     ],
                     "normalize": "identifiers"
