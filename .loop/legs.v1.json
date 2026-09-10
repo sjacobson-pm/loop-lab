@@ -1,0 +1,97 @@
+{
+    "version": 1,
+    "entry": "stub",
+    "budgets": {
+        "cycle": 3,
+        "total": 15
+    },
+    "legs": {
+        "stub": {
+            "workflow": "loop-leg-stub.yml"
+        }
+    },
+    "transitions": [
+        {
+            "from": "stub",
+            "on": "pass",
+            "to": "__done__",
+            "kind": "forward"
+        },
+        {
+            "from": "stub",
+            "on": "fail",
+            "to": "stub",
+            "kind": "backward"
+        }
+    ],
+    "_phase2_shape": {
+        "_comment": "Reference only. Ignored by loop-decide.mjs. Move into legs/transitions when the real legs exist.",
+        "legs": {
+            "plan": {
+                "workflow": "loop-leg-plan.yml"
+            },
+            "plan-check": {
+                "workflow": "loop-leg-plan-check.yml"
+            },
+            "acceptance": {
+                "workflow": "loop-leg-acceptance.yml"
+            },
+            "implement": {
+                "workflow": "loop-leg-implement.yml"
+            },
+            "verify": {
+                "workflow": "loop-leg-verify.yml"
+            }
+        },
+        "transitions": [
+            {
+                "from": "plan",
+                "on": "pass",
+                "to": "plan-check",
+                "kind": "forward"
+            },
+            {
+                "from": "plan-check",
+                "on": "pass",
+                "to": "acceptance",
+                "kind": "forward"
+            },
+            {
+                "from": "plan-check",
+                "on": "fail",
+                "to": "plan",
+                "kind": "backward"
+            },
+            {
+                "from": "acceptance",
+                "on": "pass",
+                "to": "implement",
+                "kind": "forward"
+            },
+            {
+                "from": "acceptance",
+                "on": "dispute",
+                "to": "plan",
+                "kind": "backward"
+            },
+            {
+                "from": "implement",
+                "on": "pass",
+                "to": "verify",
+                "kind": "forward"
+            },
+            {
+                "from": "verify",
+                "on": "pass",
+                "to": "__done__",
+                "kind": "forward"
+            },
+            {
+                "from": "verify",
+                "on": "fail",
+                "to": "implement",
+                "kind": "backward"
+            }
+        ]
+    }
+}

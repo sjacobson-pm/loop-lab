@@ -1,5 +1,5 @@
 {
-    "version": 1,
+    "version": 2,
     "entry": "stub",
     "budgets": {
         "cycle": 3,
@@ -7,7 +7,20 @@
     },
     "legs": {
         "stub": {
-            "workflow": "loop-leg-stub.yml"
+            "workflow": "loop-leg-stub.yml",
+            "facts": {
+                "required": [
+                    "failing_tests",
+                    "error_kind",
+                    "error_text"
+                ],
+                "signature": [
+                    "failing_tests",
+                    "error_kind",
+                    "error_text"
+                ],
+                "normalize": "test_output"
+            }
         }
     },
     "transitions": [
@@ -25,22 +38,81 @@
         }
     ],
     "_phase2_shape": {
-        "_comment": "Reference only. Ignored by loop-decide.mjs. Move into legs/transitions when the real legs exist.",
+        "_comment": "Reference only. Ignored by loop-decide.mjs. Move entries into legs/transitions one leg at a time.",
         "legs": {
             "plan": {
-                "workflow": "loop-leg-plan.yml"
+                "workflow": "loop-leg-plan.yml",
+                "facts": {
+                    "_comment": "The planner fails when it cannot produce a plan at all, not when the plan is wrong. Checking is the checker's job.",
+                    "required": [
+                        "blocked_criteria",
+                        "reason_code"
+                    ],
+                    "signature": [
+                        "blocked_criteria",
+                        "reason_code"
+                    ],
+                    "normalize": "identifiers"
+                }
             },
             "plan-check": {
-                "workflow": "loop-leg-plan-check.yml"
+                "workflow": "loop-leg-plan-check.yml",
+                "facts": {
+                    "_comment": "Rule ids and criterion anchors are already canonical. Text normalization would only add noise.",
+                    "required": [
+                        "violated_rules",
+                        "criterion_ids"
+                    ],
+                    "signature": [
+                        "violated_rules",
+                        "criterion_ids"
+                    ],
+                    "normalize": "identifiers"
+                }
             },
             "acceptance": {
-                "workflow": "loop-leg-acceptance.yml"
+                "workflow": "loop-leg-acceptance.yml",
+                "facts": {
+                    "_comment": "uncovered_criteria drives the signature; red_first_failures is diagnostic and deliberately excluded so a flaky red-first count cannot change breaker behavior.",
+                    "required": [
+                        "uncovered_criteria"
+                    ],
+                    "signature": [
+                        "uncovered_criteria"
+                    ],
+                    "normalize": "identifiers"
+                }
             },
             "implement": {
-                "workflow": "loop-leg-implement.yml"
+                "workflow": "loop-leg-implement.yml",
+                "facts": {
+                    "_comment": "Implementer failure means it could not proceed - scope violation, missing contract, dispute raised. Test failures belong to verify.",
+                    "required": [
+                        "reason_code",
+                        "disputed_criteria"
+                    ],
+                    "signature": [
+                        "reason_code",
+                        "disputed_criteria"
+                    ],
+                    "normalize": "identifiers"
+                }
             },
             "verify": {
-                "workflow": "loop-leg-verify.yml"
+                "workflow": "loop-leg-verify.yml",
+                "facts": {
+                    "required": [
+                        "failing_tests",
+                        "error_kind",
+                        "error_text"
+                    ],
+                    "signature": [
+                        "failing_tests",
+                        "error_kind",
+                        "error_text"
+                    ],
+                    "normalize": "test_output"
+                }
             }
         },
         "transitions": [
@@ -70,7 +142,7 @@
             },
             {
                 "from": "acceptance",
-                "on": "dispute",
+                "on": "fail",
                 "to": "plan",
                 "kind": "backward"
             },
@@ -79,6 +151,12 @@
                 "on": "pass",
                 "to": "verify",
                 "kind": "forward"
+            },
+            {
+                "from": "implement",
+                "on": "fail",
+                "to": "plan",
+                "kind": "backward"
             },
             {
                 "from": "verify",

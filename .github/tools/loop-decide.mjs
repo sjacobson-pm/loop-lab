@@ -42,6 +42,28 @@ const { values: args } = parseArgs({
   },
 });
 
+const NORMALIZERS = {
+  identifiers: (value) =>
+    [
+      ...new Set(
+        toList(value)
+          .map((v) => String(v).trim())
+          .filter(Boolean),
+      ),
+    ]
+      .sort()
+      .join(","),
+  test_output: (value) =>
+    [...new Set(toList(value).map((v) => normalizeText(v)))].sort().join(","),
+};
+
+const toList = (value) =>
+  value === null || value === undefined
+    ? []
+    : Array.isArray(value)
+      ? value
+      : [value];
+
 function die(message) {
   console.error(`loop-decide: ${message}`);
   process.exit(1);
@@ -81,31 +103,29 @@ function normalizeText(input) {
     .toLowerCase();
 }
 
-function computeSignature(leg, facts) {
-  const tests = [...new Set(facts?.failing_tests ?? [])]
-    .map((t) => normalizeText(t))
-    .sort();
+function computeSignature(leg, facts, spec) {
+  const normalize = NORMALIZERS[spec.normalize];
+  if (!normalize)
+    die(`leg "${leg}" declares unknown normalizer "${spec.normalize}"`);
 
-  const parts = [
-    leg,
-    tests.join(","),
-    normalizeText(facts?.error_kind),
-    normalizeText(facts?.error_text),
-  ];
+  const parts = spec.signature.map(
+    (field) => `${field}=${normalize(facts?.[field])}`,
+  );
+  const canonical = [leg, ...parts].join("|");
 
-  const canonical = parts.join("|");
+  if (process.env.LOOP_EXPLAIN) console.error(`canonical: ${canonical}`);
+
   const digest = createHash("sha256")
     .update(canonical)
     .digest("hex")
     .slice(0, 12);
-
-  // Readable prefix keeps the ledger greppable without decoding hashes.
-  const label =
-    tests.length > 0
-      ? `${tests.length}test`
-      : (normalizeText(facts?.error_kind) || "unknown").slice(0, 16);
-
-  if (process.env.LOOP_EXPLAIN) console.error(`canonical: ${canonical}`);
+  const first = facts?.[spec.signature[0]];
+  const label = Array.isArray(first)
+    ? `${first.length}x`
+    : String(first ?? "none")
+        .replace(/[^a-z0-9]+/gi, "")
+        .slice(0, 12)
+        .toLowerCase() || "none";
 
   return { signature: `${leg}:${label}:${digest}`, canonical };
 }
@@ -238,12 +258,41 @@ const outcome = verdict.outcome?.trim();
 if (!outcome) die("verdict is missing outcome");
 
 // Signature only means something for a failure.
+const spec = config.legs[leg].facts;
+if (!spec) die(`leg "${leg}" has no facts declaration in legs.json`);
+
 let signature = null;
 if (outcome !== "pass") {
-  ({ signature } = computeSignature(leg, verdict.facts));
+  const missing = spec.required.filter(
+    (f) => verdict.facts?.[f] === undefined || verdict.facts?.[f] === null,
+  );
+
+  if (missing.length > 0) {
+    abort(`${leg} verdict is missing required facts: ${missing.join(", ")}`);
+  }
+
+  ({ signature } = computeSignature(leg, verdict.facts, spec));
 }
 
 const attempt = ledger.total;
+
+function abort(reason) {
+  ledger.history.push({
+    at: new Date().toISOString(),
+    attempt: ledger.total,
+    leg: ledger.current_leg,
+    outcome: null,
+    signature: null,
+    decision: "error",
+    reason,
+    run_id: args["run-id"] || null,
+    controller_run_id: args["controller-run-id"] || null,
+  });
+  ledger.status = "error";
+  save(path, ledger);
+  console.error(`loop-decide: ${reason}`);
+  process.exit(1);
+}
 
 function conclude(decision, reason, nextLeg = null) {
   ledger.history.push({
