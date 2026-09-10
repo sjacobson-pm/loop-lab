@@ -84,6 +84,12 @@ function readJson(path) {
 // the same way" produces the same string. Deliberately aggressive: a false
 // match halts a loop that might have recovered, which costs one manual
 // restart. A false miss lets an unproductive loop burn its whole budget.
+//
+// Note: the two path branches disagree. `[A-Za-z]:\\[^\s:]+` consumes the
+// filename; `\/[^\s:]+\/` stops at the last slash and leaves it. So
+// C:\src\Rounding.cs and /src/Rounding.cs do not produce the same signature.
+// CI is always POSIX so this is currently harmless, but a local repro of a
+// CI failure will not match. Fix by making both preserve the basename.
 // ---------------------------------------------------------------------------
 
 function normalizeText(input) {
