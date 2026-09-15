@@ -23,7 +23,7 @@ on:
         description: Phase 1 only - scripted verdict sequence for the stub leg
         required: false
         type: string
-        default: fail-fail-pass
+        default: ""
 
 concurrency:
   group: loop-conductor
