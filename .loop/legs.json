@@ -7,6 +7,7 @@
     },
     "legs": {
         "stub": {
+            "_comment": "not a 'real' leg, retained only so check-loop has a leg to drive.",
             "workflow": "loop-leg-stub.yml",
             "facts": {
                 "required": [
@@ -66,21 +67,6 @@
     "_phase2_shape": {
         "_comment": "Reference only. Ignored by loop-decide.mjs. Move entries into legs/transitions one leg at a time.",
         "legs": {
-            "plan": {
-                "workflow": "loop-leg-plan.yml",
-                "facts": {
-                    "_comment": "The planner fails when it cannot produce a plan at all, not when the plan is wrong. Checking is the checker's job.",
-                    "required": [
-                        "at_fault_criteria",
-                        "reason_codes"
-                    ],
-                    "signature": [
-                        "at_fault_criteria",
-                        "reason_codes"
-                    ],
-                    "normalize": "identifiers"
-                }
-            },
             "plan-check": {
                 "workflow": "loop-leg-plan-check.yml",
                 "facts": {

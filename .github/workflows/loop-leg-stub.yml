@@ -3,35 +3,68 @@ name: loop-leg-stub
 on:
   workflow_dispatch:
     inputs:
-      task_id: { required: true, type: string }
-      attempt: { required: true, type: string }
-      outcomes: { required: false, type: string, default: "pass" }
+      task_id:
+        description: Task identifier
+        required: true
+        type: string
+      attempt:
+        description: Which fixture entry to emit (1-based)
+        required: true
+        type: string
+      story:
+        description: unused by this leg. declared so the conductor can dispatch uniformly
+        required: false
+        type: string
+        default: ""
+      fixture:
+        description: Name of the sequence under tests/fixtures/sequences
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  stub:
+  run-leg:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout fixtures
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tests/fixtures/sequences
 
-      - name: Stand in for the agent
+      - name: Emit verdict
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          ATTEMPT: ${{ inputs.attempt }}
+          FIXTURE: ${{ inputs.fixture }}
         run: |
-          mkdir -p "runs/${{ inputs.task_id }}"
-          printf 'attempt %s work product\n' "${{ inputs.attempt }}" \
-            > "runs/${{ inputs.task_id }}/work-product.txt"
+          set -euo pipefail
 
-      - name: Gate
-        run: |
-          node .github/tools/check-stub.mjs \
-            --task-id  "${{ inputs.task_id }}" \
-            --attempt  "${{ inputs.attempt }}" \
-            --outcomes "${{ inputs.outcomes }}" \
-            --work     "runs/${{ inputs.task_id }}/work-product.txt" \
-            --out      verdict.json
+          FILE="tests/fixtures/sequences/${FIXTURE}.json"
+          if [ ! -f "$FILE" ]; then
+              echo "::error::no fixture named '${FIXTURE}' at ${FILE}"
+              exit 1
+          fi
 
-      - uses: actions/upload-artifact@v4
+          COUNT=$(jq '.entries | length' "$FILE")
+
+          if [ "$ATTEMPT" -gt "$COUNT" ]; then
+              echo "::error::attempt ${ATTEMPT} exceeds ${COUNT} entries in '${FIXTURE}'"
+              exit 1
+          fi
+
+          jq --arg task "$TASK_ID" --argjson n "$ATTEMPT" \
+              '.entries[$n -1] + { task_id: $task, attempt: $n, leg: "stub" }' \
+              "$FILE" > verdict.json
+
+          echo "### stub leg: ${FIXTURE} entry ${ATTEMPT}/${COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          jq . verdict.json | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload verdict
+        uses: actions/upload-artifact@v4
         with:
           name: verdict
           path: verdict.json
+          retention-days: 7
