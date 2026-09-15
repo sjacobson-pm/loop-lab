@@ -2,7 +2,7 @@
   "task_id": "T-105",
   "created_at": "2026-09-15T14:53:31.238Z",
   "fixture": null,
-  "status": "running",
+  "status": "breaker",
   "current_leg": "plan",
   "total": 2,
   "cycles": {
@@ -10,6 +10,7 @@
   },
   "signatures": {
     "plan": [
+      "plan:1x:35d94877f92f",
       "plan:1x:35d94877f92f"
     ]
   },
@@ -35,6 +36,17 @@
       "reason": "plan reported fail; routing backward to plan",
       "run_id": "34984709723",
       "controller_run_id": "34985369639"
+    },
+    {
+      "at": "2026-09-15T15:05:05.504Z",
+      "attempt": 2,
+      "leg": "plan",
+      "outcome": "fail",
+      "signature": "plan:1x:35d94877f92f",
+      "decision": "breaker",
+      "reason": "signature plan:1x:35d94877f92f already seen at plan occurrence 1",
+      "run_id": "34985392832",
+      "controller_run_id": "34985997294"
     }
   ],
   "story": "US-002"
