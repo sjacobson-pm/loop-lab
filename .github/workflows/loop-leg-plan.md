@@ -32,6 +32,8 @@ on:
 permissions:
   contents: read
 
+safe-outputs: {}
+
 engine:
   id: copilot
 
@@ -39,7 +41,7 @@ engine:
 network: defaults
 
 timeout-minutes: 15
-max-turns: 30
+max-turns: 12
 
 tools:
   edit:
@@ -66,6 +68,7 @@ post-steps:
       TASK_ID: ${{ inputs.task_id }}
       ATTEMPT: ${{ inputs.attempt }}
       STORY: ${{ inputs.story }}
+    if: always()
     run: |
       set -euo pipefail
       node .github/tools/check-plan.mjs \
@@ -78,6 +81,7 @@ post-steps:
 
   - name: Upload verdict
     uses: actions/upload-artifact@v4
+    if: always()
     with:
       name: verdict
       path: verdict.json
@@ -109,7 +113,9 @@ Read both before writing anything.
 Write exactly one file: `plans/${{ inputs.story }}.plan.json`.
 
 Write nothing else. Do not create branches, commits, or pull requests. Do not
-modify the story, the spec, or any file under `src/` or `tests/`.
+modify the story, the spec, or any file under `src/` or `tests/`. Do not create
+issues, comments, or safe outputs. The plan file is your only output. Reporting
+is the harness's job, not yours.
 
 The file must be valid JSON with this shape:
 
@@ -183,3 +189,4 @@ Valid `reason_code` values: `missing_anchor`, `contradictory_criteria`,
 
 Report being blocked rather than guessing. A plan built on a criterion you
 could not verify is worse than no plan.
+
