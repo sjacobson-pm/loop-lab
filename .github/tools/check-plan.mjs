@@ -14,16 +14,16 @@
 // unreadable story, a bad argument - because that is not something the loop
 // should try to repair by planning again.
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { parseArgs } from 'node:util';
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { parseArgs } from "node:util";
 
 const { values: args } = parseArgs({
   options: {
-    story: { type: 'string' },
-    plan: { type: 'string' },
-    'task-id': { type: 'string' },
-    attempt: { type: 'string', default: '1' },
-    out: { type: 'string', default: 'verdict.json' },
+    story: { type: "string" },
+    plan: { type: "string" },
+    "task-id": { type: "string" },
+    attempt: { type: "string", default: "1" },
+    out: { type: "string", default: "verdict.json" },
   },
 });
 
@@ -32,7 +32,7 @@ function fault(message) {
   process.exit(1);
 }
 
-for (const required of ['story', 'plan', 'task-id']) {
+for (const required of ["story", "plan", "task-id"]) {
   if (!args[required]) fault(`--${required} is required`);
 }
 if (!existsSync(args.story)) fault(`story not found: ${args.story}`);
@@ -41,7 +41,7 @@ if (!existsSync(args.story)) fault(`story not found: ${args.story}`);
 // Story: the authority on which criteria this plan must cover.
 // ---------------------------------------------------------------------------
 
-const storyText = readFileSync(args.story, 'utf8');
+const storyText = readFileSync(args.story, "utf8");
 
 // Anchors are cited in the Criteria section as `path#anchor` in backticks.
 // Nothing else in the story counts, so a criterion mentioned in prose or in
@@ -50,19 +50,53 @@ function citedCriteria(text) {
   const section = text.match(/^##\s+Criteria\s*$([\s\S]*?)(?=^##\s|\Z)/m);
   if (!section) fault(`story has no "## Criteria" section: ${args.story}`);
 
-  const anchors = [...section[1].matchAll(/`([^`\s]+#[^`\s]+)`/g)].map((m) => m[1]);
+  const anchors = [...section[1].matchAll(/`([^`\s]+#[^`\s]+)`/g)].map(
+    (m) => m[1],
+  );
   if (anchors.length === 0) fault(`story cites no criteria: ${args.story}`);
 
   const seen = new Set();
-  const duplicates = anchors.filter((a) => (seen.has(a) ? true : (seen.add(a), false)));
+  const duplicates = anchors.filter((a) =>
+    seen.has(a) ? true : (seen.add(a), false),
+  );
   if (duplicates.length > 0) {
-    fault(`story cites the same criterion twice: ${[...new Set(duplicates)].join(', ')}`);
+    fault(
+      `story cites the same criterion twice: ${[...new Set(duplicates)].join(", ")}`,
+    );
   }
 
   return anchors;
 }
 
+function unresolvedAnchors(anchors) {
+  const cache = new Map();
+  const absent = [];
+
+  for (const anchor of anchors) {
+    const [file, fragment = ""] = anchor.split("#");
+
+    if (!cache.has(file)) {
+      cache.set(
+        file,
+        existsSync(file)
+          ? new Set(
+              [...readFileSync(file, "utf8").matchAll(/\{#([^}\s]+)\}/g)].map(
+                (m) => m[1],
+              ),
+            )
+          : null,
+      );
+    }
+
+    const present = cache.get(file);
+    if (present === null || !present.has(fragment)) absent.push(anchor);
+  }
+
+  return absent;
+}
+
 const expected = citedCriteria(storyText);
+const unresolvedAnchorsList = unresolvedAnchors(expected);
 const storyId = (storyText.match(/^id:\s*(\S+)\s*$/m) ?? [])[1];
 
 // ---------------------------------------------------------------------------
@@ -78,37 +112,55 @@ const flag = (code, criteria = []) => {
 };
 
 const BLOCK_REASONS = new Set([
-  'missing_anchor',
-  'contradictory_criteria',
-  'unobservable_criterion',
-  'out_of_scope_required',
+  "missing_anchor",
+  "contradictory_criteria",
+  "unobservable_criterion",
+  "out_of_scope_required",
 ]);
 
 if (!existsSync(args.plan)) {
-  flag('missing_plan');
+  flag("missing_plan");
 } else {
   let plan;
   try {
-    plan = JSON.parse(readFileSync(args.plan, 'utf8'));
+    plan = JSON.parse(readFileSync(args.plan, "utf8"));
   } catch (error) {
-    flag('malformed_plan');
+    flag("malformed_plan");
     console.error(`plan is not valid JSON: ${error.message}`);
   }
 
   if (plan?.blocked === true) {
     // The planner declared it could not proceed. Trust the report, but check
     // that it is well formed - a block with no reason is not actionable.
-    const reason = String(plan.reason_code ?? '');
+    const reason = String(plan.reason_code ?? "");
     if (!BLOCK_REASONS.has(reason)) {
-      flag('malformed_block');
+      flag("malformed_block");
     } else {
-      flag(reason, plan.blocked_criteria ?? []);
+      if (reason === "missing_anchor") {
+        const falsely = (plan.blocked_criteria ?? []).filter(
+          (a) => !unresolvedAnchorsList.includes(a),
+        );
+        if (falsely.length > 0) {
+          // Claimed an anchor is missing when it is present. This is the
+          // escape hatch a planner would use to avoid hard work.
+          flag("false_block", falsely);
+        } else {
+          flag(reason, plan.blocked_criteria ?? []);
+        }
+      } else {
+        flag(reason, plan.blocked_criteria ?? []);
+      }
     }
-    if (!Array.isArray(plan.blocked_criteria) || plan.blocked_criteria.length === 0) {
-      flag('malformed_block');
+    if (
+      !Array.isArray(plan.blocked_criteria) ||
+      plan.blocked_criteria.length === 0
+    ) {
+      flag("malformed_block");
     }
   } else if (plan) {
-    if (storyId && plan.story_id !== storyId) flag('wrong_story');
+    if (unresolvedAnchorsList.length > 0)
+      flag("should_have_blocked", unresolvedAnchorsList);
+    if (storyId && plan.story_id !== storyId) flag("wrong_story");
 
     const claimed = Array.isArray(plan.criteria) ? plan.criteria : [];
     const tasks = Array.isArray(plan.tasks) ? plan.tasks : [];
@@ -121,31 +173,35 @@ if (!existsSync(args.plan)) {
 
     const missing = expected.filter((a) => !counts.has(a));
     const extra = [...counts.keys()].filter((a) => !expected.includes(a));
-    const repeated = [...counts.entries()].filter(([, n]) => n > 1).map(([a]) => a);
+    const repeated = [...counts.entries()]
+      .filter(([, n]) => n > 1)
+      .map(([a]) => a);
 
-    if (missing.length > 0) flag('missing_criteria', missing);
-    if (extra.length > 0) flag('extra_criteria', extra);
-    if (repeated.length > 0) flag('duplicate_criteria', repeated);
+    if (missing.length > 0) flag("missing_criteria", missing);
+    if (extra.length > 0) flag("extra_criteria", extra);
+    if (repeated.length > 0) flag("duplicate_criteria", repeated);
 
     // 2. Single-repo story: everything is primary.
-    const notPrimary = claimed.filter((c) => c?.coverage !== 'primary').map((c) => c?.anchor);
-    if (notPrimary.length > 0) flag('bad_coverage', notPrimary);
+    const notPrimary = claimed
+      .filter((c) => c?.coverage !== "primary")
+      .map((c) => c?.anchor);
+    if (notPrimary.length > 0) flag("bad_coverage", notPrimary);
 
     // 3. Every criterion names tasks, and they all resolve.
     const empty = claimed
       .filter((c) => !Array.isArray(c?.tasks) || c.tasks.length === 0)
       .map((c) => c?.anchor);
-    if (empty.length > 0) flag('no_tasks', empty);
+    if (empty.length > 0) flag("no_tasks", empty);
 
     const unresolved = claimed
       .filter((c) => (c?.tasks ?? []).some((id) => !taskIds.has(id)))
       .map((c) => c?.anchor);
-    if (unresolved.length > 0) flag('unresolved_task', unresolved);
+    if (unresolved.length > 0) flag("unresolved_task", unresolved);
 
     // 4. No task exists that no criterion needs.
     const referenced = new Set(claimed.flatMap((c) => c?.tasks ?? []));
     const orphans = [...taskIds].filter((id) => !referenced.has(id));
-    if (orphans.length > 0) flag('orphan_task');
+    if (orphans.length > 0) flag("orphan_task");
 
     // 5. Each criterion owns at least one task no other criterion claims.
     //    Without this, a plan can link every criterion to the same two tasks
@@ -158,19 +214,19 @@ if (!existsSync(args.plan)) {
     const indistinct = claimed
       .filter((c) => !(c?.tasks ?? []).some((id) => useCount.get(id) === 1))
       .map((c) => c?.anchor);
-    if (indistinct.length > 0) flag('no_distinguishing_task', indistinct);
+    if (indistinct.length > 0) flag("no_distinguishing_task", indistinct);
   }
 }
 
-const outcome = codes.size === 0 ? 'pass' : 'fail';
+const outcome = codes.size === 0 ? "pass" : "fail";
 
 const verdict = {
-  task_id: args['task-id'],
+  task_id: args["task-id"],
   attempt: Number(args.attempt),
-  leg: 'plan',
+  leg: "plan",
   outcome,
   facts:
-    outcome === 'pass'
+    outcome === "pass"
       ? {}
       : {
           reason_codes: [...codes].sort(),
@@ -180,8 +236,11 @@ const verdict = {
 
 writeFileSync(args.out, `${JSON.stringify(verdict, null, 2)}\n`);
 
-console.log(`plan ${outcome}: ${expected.length} criteria cited by ${args.story}`);
-if (outcome === 'fail') {
-  console.log(`  reasons: ${[...codes].sort().join(', ')}`);
-  if (atFault.size > 0) console.log(`  at fault: ${[...atFault].sort().join(', ')}`);
+console.log(
+  `plan ${outcome}: ${expected.length} criteria cited by ${args.story}`,
+);
+if (outcome === "fail") {
+  console.log(`  reasons: ${[...codes].sort().join(", ")}`);
+  if (atFault.size > 0)
+    console.log(`  at fault: ${[...atFault].sort().join(", ")}`);
 }
