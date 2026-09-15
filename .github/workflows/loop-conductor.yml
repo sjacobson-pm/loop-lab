@@ -1,10 +1,11 @@
-name: loop-controller
+name: loop-conductor
 
 # This workflow controls the agentic development loop
 on:
   workflow_run:
     workflows:
       - loop-leg-stub
+      - loop-leg-plan
     types:
       - completed
 
@@ -25,7 +26,7 @@ on:
         default: fail-fail-pass
 
 concurrency:
-  group: loop-controller
+  group: loop-conductor
   cancel-in-progress: false
 
 permissions:
@@ -41,11 +42,11 @@ jobs:
       contents: write
       actions: read
     steps:
-      - name: Checkout controller sources
+      - name: Checkout conductor sources
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
-          path: controller
+          path: conductor
           sparse-checkout: |
             .github/tools
             .loop
@@ -72,22 +73,22 @@ jobs:
       - name: Decide (start)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          node controller/.github/tools/loop-decide.mjs \
+          node conductor/.github/tools/loop-decide.mjs \
             --fixture "${{ inputs.fixture }}" \
             --story "${{ inputs.story }}" \
             --task-id "${{ inputs.task_id }}" \
-            --controller-run-id "${{ github.run_id }}" \
-            --config controller/.loop/legs.json \
+            --conductor-run-id "${{ github.run_id }}" \
+            --config conductor/.loop/legs.json \
             --state-dir state > decision.json
 
       - name: Decide (continue)
         if: github.event_name == 'workflow_run'
         run: |
-          node controller/.github/tools/loop-decide.mjs \
+          node conductor/.github/tools/loop-decide.mjs \
             --verdict verdict/verdict.json \
-            --controller-run-id "${{ github.run_id }}" \
+            --conductor-run-id "${{ github.run_id }}" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --config controller/.loop/legs.json \
+            --config conductor/.loop/legs.json \
             --state-dir state > decision.json
 
       - name: Decide (read)
@@ -103,8 +104,8 @@ jobs:
       - name: Commit ledger
         working-directory: state
         run: |
-          git config user.name "loop-controller"
-          git config user.email "loop-controller@users.noreply.github.com"
+          git config user.name "loop-conductor"
+          git config user.email "loop-conductor@users.noreply.github.com"
           git add -A
           git diff --staged --quiet && exit 0
           git commit -m "${{ steps.decide.outputs.task_id }} attempt ${{ steps.decide.outputs.attempt }}: ${{ steps.decide.outputs.decision }}"

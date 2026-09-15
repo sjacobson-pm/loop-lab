@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // check-loop.mjs
 //
-// Verifies the controller's decision logic against the committed baselines.
+// Verifies the conductor's decision logic against the committed baselines.
 //
 //   node .github/tools/check-loop.mjs                 # drive every sequence locally
 //   node .github/tools/check-loop.mjs --only breaker-repeat
@@ -10,7 +10,7 @@
 //
 // Drive mode stands in for the stub leg: it reads a sequence fixture, feeds
 // entries to loop-decide.mjs one at a time, and follows next_attempt exactly
-// as the controller does. No runner, no cost, no network.
+// as the conductor does. No runner, no cost, no network.
 //
 // Signatures are compared as equality classes rather than literal hashes, so
 // retuning normalization does not invalidate the baselines - only a change
@@ -99,7 +99,7 @@ function drive(name, expect) {
         );
 
       // Same over-run check the stub leg performs, for the same reason: it
-      // means the controller kept dispatching past the end of the script.
+      // means the conductor kept dispatching past the end of the script.
       if (attempt > sequence.entries.length) {
         throw new Error(
           `attempt ${attempt} exceeds ${sequence.entries.length} entries - counter is not advancing correctly`,

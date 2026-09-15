@@ -3,9 +3,9 @@
 //
 // Sole authority for loop continuation. Reads a leg verdict and the task
 // ledger, decides what happens next, appends to the ledger, and prints one
-// JSON object to stdout for the controller to act on.
+// JSON object to stdout for the conductor to act on.
 //
-// Nothing here is reachable by an agent: the controller runs it from the
+// Nothing here is reachable by an agent: the conductor runs it from the
 // default branch, and it is invoked by plain Actions YAML.
 //
 //   node loop-decide.mjs --verdict <path|none> --state-dir <dir>
@@ -36,7 +36,7 @@ const { values: args } = parseArgs({
     "state-dir": { type: "string" },
     "task-id": { type: "string", default: "" },
     config: { type: "string", default: ".loop/legs.json" },
-    "controller-run-id": { type: "string", default: "" },
+    "conductor-run-id": { type: "string", default: "" },
     "run-id": { type: "string", default: "" },
     fixture: { type: "string", default: "" },
     entry: { type: "string" },
@@ -188,7 +188,7 @@ function abort(reason) {
     decision: "error",
     reason,
     run_id: args["run-id"] || null,
-    controller_run_id: args["controller-run-id"] || null,
+    controller_run_id: args["conductor-run-id"] || null,
   });
   ledger.status = "error";
   save(path, ledger);
@@ -206,7 +206,7 @@ function conclude(decision, reason, nextLeg = null) {
     decision,
     reason,
     run_id: args["run-id"] || null,
-    controller_run_id: args["controller-run-id"] || null,
+    controller_run_id: args["conductor-run-id"] || null,
   });
 
   if (signature) {
@@ -283,7 +283,7 @@ if (fresh) {
     decision: "run",
     reason: "task started",
     run_id: args["run-id"] || null,
-    controller_run_id: args["controller-run-id"] || null,
+    controller_run_id: args["conductor-run-id"] || null,
   });
   save(path, ledger);
 

@@ -68,7 +68,7 @@
         "_comment": "Reference only. Ignored by loop-decide.mjs. Move entries into legs/transitions one leg at a time.",
         "legs": {
             "plan-check": {
-                "workflow": "loop-leg-plan-check.yml",
+                "workflow": "loop-leg-plan-check.lock.yml",
                 "facts": {
                     "_comment": "Rule ids and criterion anchors are already canonical. Text normalization would only add noise.",
                     "required": [
@@ -83,7 +83,7 @@
                 }
             },
             "acceptance": {
-                "workflow": "loop-leg-acceptance.yml",
+                "workflow": "loop-leg-acceptance.lock.yml",
                 "facts": {
                     "_comment": "uncovered_criteria drives the signature; red_first_failures is diagnostic and deliberately excluded so a flaky red-first count cannot change breaker behavior.",
                     "required": [
@@ -96,7 +96,7 @@
                 }
             },
             "implement": {
-                "workflow": "loop-leg-implement.yml",
+                "workflow": "loop-leg-implement.lock.yml",
                 "facts": {
                     "_comment": "Implementer failure means it could not proceed - scope violation, missing contract, dispute raised. Test failures belong to verify.",
                     "required": [
@@ -113,7 +113,7 @@
                 }
             },
             "verify": {
-                "workflow": "loop-leg-verify.yml",
+                "workflow": "loop-leg-verify.lock.yml",
                 "facts": {
                     "required": [
                         "failing_tests",

@@ -1,6 +1,6 @@
 name: check-loop
 
-# Guards the controller's decision logic. Runs the committed baselines against
+# Guards the conductor's decision logic. Runs the committed baselines against
 # loop-decide.mjs on every change to the loop's brain or its fixtures.
 #
 # Deliberately plain Actions: this gate must not be reachable by any agent.
