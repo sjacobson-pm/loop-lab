@@ -14,6 +14,10 @@ on:
         description: Task identifier
         required: true
         type: string
+      story:
+        description: Story identifier
+        required: true
+        type: string
       fixture:
         description: Phase 1 only - scripted verdict sequence for the stub leg
         required: false
@@ -70,6 +74,7 @@ jobs:
         run: |
           node controller/.github/tools/loop-decide.mjs \
             --fixture "${{ inputs.fixture }}" \
+            --story "${{ inputs.story }}" \
             --task-id "${{ inputs.task_id }}" \
             --controller-run-id "${{ github.run_id }}" \
             --config controller/.loop/legs.json \
@@ -111,12 +116,14 @@ jobs:
           GH_TOKEN: ${{ secrets.LOOP_DISPATCH_TOKEN }}
         run: |
           FIXTURE=$(jq -r '.fixture // ""' "state/tasks/${{ steps.decide.outputs.task_id }}.json")
+          STORY=$(jq -r '.story // ""' "state/tasks/${{ steps.decide.outputs.task_id }}.json")
           gh workflow run "${{ steps.decide.outputs.next_leg }}" \
             --repo "${{ github.repository }}" \
             --ref "${{ github.event.repository.default_branch }}" \
             -f task_id="${{ steps.decide.outputs.task_id }}" \
             -f attempt="${{ steps.decide.outputs.next_attempt }}" \
-            -f fixture="$FIXTURE"
+            -f fixture="$FIXTURE" \
+            -f story="$STORY"
 
       - name: Halt
         if: steps.decide.outputs.decision != 'run'

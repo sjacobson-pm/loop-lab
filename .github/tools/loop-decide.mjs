@@ -39,6 +39,8 @@ const { values: args } = parseArgs({
     "controller-run-id": { type: "string", default: "" },
     "run-id": { type: "string", default: "" },
     fixture: { type: "string", default: "" },
+    entry: { type: "string" },
+    story: { type: "string" },
   },
 });
 
@@ -151,6 +153,7 @@ function emptyLedger(taskId) {
     cycles: {}, // "to<-from" -> count of backward transitions
     signatures: {}, // leg -> [signature, ...] in order observed
     history: [], // append-only
+    story: null,
   };
 }
 
@@ -158,7 +161,7 @@ function ledgerPath(stateDir, taskId) {
   return join(stateDir, "tasks", `${taskId}.json`);
 }
 
-function archive(path) {
+function archive(path, taskId) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const target = join(dirname(path), "archive", `${taskId}-${stamp}.json`);
   mkdirSync(dirname(target), { recursive: true });
@@ -173,6 +176,57 @@ function save(path, ledger) {
 function emit(decision) {
   process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
   process.exit(0);
+}
+
+function abort(reason) {
+  ledger.history.push({
+    at: new Date().toISOString(),
+    attempt: ledger.total,
+    leg: ledger.current_leg,
+    outcome: null,
+    signature: null,
+    decision: "error",
+    reason,
+    run_id: args["run-id"] || null,
+    controller_run_id: args["controller-run-id"] || null,
+  });
+  ledger.status = "error";
+  save(path, ledger);
+  console.error(`loop-decide: ${reason}`);
+  process.exit(1);
+}
+
+function conclude(decision, reason, nextLeg = null) {
+  ledger.history.push({
+    at: new Date().toISOString(),
+    attempt,
+    leg,
+    outcome,
+    signature,
+    decision,
+    reason,
+    run_id: args["run-id"] || null,
+    controller_run_id: args["controller-run-id"] || null,
+  });
+
+  if (signature) {
+    (ledger.signatures[leg] ??= []).push(signature);
+  }
+
+  ledger.status = decision === "run" ? "running" : decision;
+  if (decision === "run") ledger.current_leg = nextLeg;
+
+  save(path, ledger);
+
+  emit({
+    task_id: taskId,
+    attempt,
+    next_attempt: decision === "run" ? ledger.total : null,
+    decision,
+    next_leg: decision === "run" ? config.legs[nextLeg].workflow : null,
+    signature,
+    reason,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -213,8 +267,9 @@ if (fresh) {
   }
   ledger = emptyLedger(taskId);
   ledger.fixture = args.fixture || null;
+  ledger.story = args.story || null;
 
-  const entry = config.entry;
+  const entry = args.entry || config.entry;
   if (!config.legs[entry]) die(`entry leg "${entry}" is not defined in legs`);
 
   ledger.current_leg = entry;
@@ -281,57 +336,6 @@ if (outcome !== "pass") {
 }
 
 const attempt = ledger.total;
-
-function abort(reason) {
-  ledger.history.push({
-    at: new Date().toISOString(),
-    attempt: ledger.total,
-    leg: ledger.current_leg,
-    outcome: null,
-    signature: null,
-    decision: "error",
-    reason,
-    run_id: args["run-id"] || null,
-    controller_run_id: args["controller-run-id"] || null,
-  });
-  ledger.status = "error";
-  save(path, ledger);
-  console.error(`loop-decide: ${reason}`);
-  process.exit(1);
-}
-
-function conclude(decision, reason, nextLeg = null) {
-  ledger.history.push({
-    at: new Date().toISOString(),
-    attempt,
-    leg,
-    outcome,
-    signature,
-    decision,
-    reason,
-    run_id: args["run-id"] || null,
-    controller_run_id: args["controller-run-id"] || null,
-  });
-
-  if (signature) {
-    (ledger.signatures[leg] ??= []).push(signature);
-  }
-
-  ledger.status = decision === "run" ? "running" : decision;
-  if (decision === "run") ledger.current_leg = nextLeg;
-
-  save(path, ledger);
-
-  emit({
-    task_id: taskId,
-    attempt,
-    next_attempt: decision === "run" ? ledger.total : null,
-    decision,
-    next_leg: decision === "run" ? config.legs[nextLeg].workflow : null,
-    signature,
-    reason,
-  });
-}
 
 // 1. Breaker first. A repeat signature means no new information is being
 //    produced; remaining budget is irrelevant. Scoped within a leg, and

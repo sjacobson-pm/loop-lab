@@ -1,4 +1,5 @@
 {
+    "entry": "stub",
     "fixture": "fail-fail-pass",
     "description": "Two distinct failures then success. Proves the loop iterates and that next_attempt advances. Classes A and B must differ or the breaker fires before the pass.",
     "status": "pass",

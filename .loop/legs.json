@@ -1,6 +1,6 @@
 {
     "version": 2,
-    "entry": "stub",
+    "entry": "plan",
     "budgets": {
         "cycle": 3,
         "total": 15
@@ -21,9 +21,35 @@
                 ],
                 "normalize": "test_output"
             }
+        },
+        "plan": {
+            "workflow": "loop-leg-plan.lock.yml",
+            "facts": {
+                "required": [
+                    "reason_codes",
+                    "at_fault_criteria"
+                ],
+                "signature": [
+                    "reason_codes",
+                    "at_fault_criteria"
+                ],
+                "normalize": "identifiers"
+            }
         }
     },
     "transitions": [
+        {
+            "from": "plan",
+            "on": "pass",
+            "to": "__done__",
+            "kind": "forward"
+        },
+        {
+            "from": "plan",
+            "on": "fail",
+            "to": "plan",
+            "kind": "backward"
+        },
         {
             "from": "stub",
             "on": "pass",

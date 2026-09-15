@@ -1,4 +1,5 @@
 {
+    "entry": "stub",
     "fixture": "pass",
     "description": "Shortest path: one leg, immediate success.",
     "status": "pass",

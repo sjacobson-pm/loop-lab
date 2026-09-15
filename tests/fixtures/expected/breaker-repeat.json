@@ -1,4 +1,5 @@
 {
+    "entry": "stub",
     "fixture": "breaker-repeat",
     "description": "Identical failure twice. Breaker halts before the cycle budget is near spent. The fixture's third entry must never be emitted.",
     "status": "breaker",

@@ -178,4 +178,3 @@ Valid `reason_code` values: `missing_anchor`, `contradictory_criteria`,
 
 Report being blocked rather than guessing. A plan built on a criterion you
 could not verify is worse than no plan.
-

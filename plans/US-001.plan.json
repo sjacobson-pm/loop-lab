@@ -1,0 +1,39 @@
+{
+  "story_id": "US-001",
+  "spec_path": "spec/rounding.md",
+  "target_profile": "dotnet-xunit",
+  "criteria": [
+    {
+      "anchor": "spec/rounding.md#ceiling-to-basic",
+      "coverage": "primary",
+      "tasks": ["T1", "T2"]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-negative",
+      "coverage": "primary",
+      "tasks": ["T1", "T2"]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-invalid-multiple",
+      "coverage": "primary",
+      "tasks": ["T1", "T2"]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-scale",
+      "coverage": "primary",
+      "tasks": ["T1", "T2"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "summary": "Implement public static CeilingTo(decimal value, decimal multiple) in src/Rounding.cs under namespace LoopLab.Rounding, computing the smallest multiple >= value, preserving the scale of multiple, and throwing ArgumentOutOfRangeException (paramName multiple) for non-positive multiples.",
+      "files": ["src/Rounding.cs"]
+    },
+    {
+      "id": "T2",
+      "summary": "Add unit tests in tests/unit/RoundingTests.cs covering positive basic rounding and exact-multiple boundary, negative value rounding and its boundary, zero/negative multiple exception with ParamName check, and scale preservation of the returned decimal via decimal.GetBits.",
+      "files": ["tests/unit/RoundingTests.cs"]
+    }
+  ]
+}

@@ -35,6 +35,7 @@ const { values: args } = parseArgs({
     config: { type: "string", default: ".loop/legs.json" },
     sequences: { type: "string", default: "tests/fixtures/sequences" },
     expected: { type: "string", default: "tests/fixtures/expected" },
+    entry: { type: "string" },
     case: { type: "string" },
     only: { type: "string" },
     ledger: { type: "string" },
@@ -67,7 +68,7 @@ function runDecide(argv) {
   return JSON.parse(out);
 }
 
-function drive(name) {
+function drive(name, expect) {
   const sequence = readJson(join(args.sequences, `${name}.json`));
   const dir = mkdtempSync(join(tmpdir(), "loop-check-"));
   const taskId = `CHK-${name}`;
@@ -82,6 +83,7 @@ function drive(name) {
       name,
       "--state-dir",
       dir,
+      ...(expect.entry ? ["--entry", expect.entry] : []),
     ]);
     let guard = 0;
 
@@ -226,7 +228,7 @@ for (const item of cases) {
   let problems;
 
   try {
-    const ledger = item.ledger ?? drive(item.name);
+    const ledger = item.ledger ?? drive(item.name, expect);
     problems = compare(ledger, expect);
   } catch (error) {
     problems = [error.message];
