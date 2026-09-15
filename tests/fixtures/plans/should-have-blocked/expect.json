@@ -1,0 +1,7 @@
+{
+  "description": "Fully conformant in shape, but invents work for a criterion that does not exist in the spec. The mirror of false_block: refusing to block when blocking was required.",
+  "story": "US-002",
+  "outcome": "fail",
+  "reason_codes": ["should_have_blocked"],
+  "at_fault_criteria": ["spec/rounding.md#ceiling-to-currency"]
+}

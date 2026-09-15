@@ -1,0 +1,7 @@
+{
+  "description": "The planner correctly refused US-002: the cited anchor is genuinely absent from the spec. The claim verifies, so it passes through as missing_anchor.",
+  "story": "US-002",
+  "outcome": "fail",
+  "reason_codes": ["missing_anchor"],
+  "at_fault_criteria": ["spec/rounding.md#ceiling-to-currency"]
+}

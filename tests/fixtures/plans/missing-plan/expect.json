@@ -1,0 +1,7 @@
+{
+  "description": "No plan.json in this directory. The agent died before writing anything, which must still produce a verdict rather than stalling the loop.",
+  "story": "US-001",
+  "outcome": "fail",
+  "reason_codes": ["missing_plan"],
+  "at_fault_criteria": []
+}

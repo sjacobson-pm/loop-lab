@@ -1,0 +1,7 @@
+{
+  "description": "A block with a reason code outside of the declared set. The planner reports; the checker decides whether the report is usable.",
+  "story": "US-002",
+  "outcome": "fail",
+  "reason_codes": ["malformed_block"],
+  "at_fault_criteria": []
+}

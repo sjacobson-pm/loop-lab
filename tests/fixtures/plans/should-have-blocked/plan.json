@@ -1,0 +1,51 @@
+{
+    "story_id": "US-002",
+    "spec_path": "spec/rounding.md",
+    "target_profile": "dotnet-xunit",
+    "criteria": [
+        {
+            "anchor": "spec/rounding.md#ceiling-to-basic",
+            "coverage": "primary",
+            "tasks": [
+                "T1"
+            ]
+        },
+        {
+            "anchor": "spec/rounding.md#ceiling-to-scale",
+            "coverage": "primary",
+            "tasks": [
+                "T2"
+            ]
+        },
+        {
+            "anchor": "spec/rounding.md#ceiling-to-currency",
+            "coverage": "primary",
+            "tasks": [
+                "T3"
+            ]
+        }
+    ],
+    "tasks": [
+        {
+            "id": "T1",
+            "summary": "x",
+            "files": [
+                "src/Rounding.cs"
+            ]
+        },
+        {
+            "id": "T2",
+            "summary": "y",
+            "files": [
+                "src/Rounding.cs"
+            ]
+        },
+        {
+            "id": "T3",
+            "summary": "z",
+            "files": [
+                "src/Rounding.cs"
+            ]
+        }
+    ]
+}

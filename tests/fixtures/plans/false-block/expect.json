@@ -1,0 +1,7 @@
+{
+  "description": "Claims an anchor is missing when it is present. This is the escape hatch a planner would use to avoid hard work, so the claim is verified rather than trusted.",
+  "story": "US-002",
+  "outcome": "fail",
+  "reason_codes": ["false_block"],
+  "at_fault_criteria": ["spec/rounding.md#ceiling-to-basic"]
+}

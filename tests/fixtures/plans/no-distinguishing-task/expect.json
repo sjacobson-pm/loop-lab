@@ -1,0 +1,12 @@
+{
+  "description": "The planner's first attempt, before rule 4 existed. Every check passes except ownership: two tasks shared by four criteria carry no information about which work discharges each criterion.",
+  "story": "US-001",
+  "outcome": "fail",
+  "reason_codes": ["no_distinguishing_task"],
+  "at_fault_criteria": [
+    "spec/rounding.md#ceiling-to-basic",
+    "spec/rounding.md#ceiling-to-invalid-multiple",
+    "spec/rounding.md#ceiling-to-negative",
+    "spec/rounding.md#ceiling-to-scale"
+  ]
+}

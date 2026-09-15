@@ -1,0 +1,7 @@
+{
+  "description": "The plan the planner produced for US-001. Each criterion owns a distinct test task.",
+  "story": "US-001",
+  "outcome": "pass",
+  "reason_codes": [],
+  "at_fault_criteria": []
+}

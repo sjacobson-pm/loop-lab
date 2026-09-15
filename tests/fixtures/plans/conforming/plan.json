@@ -1,0 +1,76 @@
+{
+  "story_id": "US-001",
+  "spec_path": "spec/rounding.md",
+  "target_profile": "dotnet-xunit",
+  "criteria": [
+    {
+      "anchor": "spec/rounding.md#ceiling-to-basic",
+      "coverage": "primary",
+      "tasks": [
+        "T1",
+        "T2"
+      ]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-negative",
+      "coverage": "primary",
+      "tasks": [
+        "T1",
+        "T3"
+      ]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-invalid-multiple",
+      "coverage": "primary",
+      "tasks": [
+        "T1",
+        "T4"
+      ]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-scale",
+      "coverage": "primary",
+      "tasks": [
+        "T1",
+        "T5"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "summary": "Implement the public static CeilingTo(decimal value, decimal multiple) method in src/Rounding.cs under namespace LoopLab.Rounding, computing the smallest multiple of `multiple` greater than or equal to `value` for both positive and negative inputs, preserving the decimal scale of `multiple` in the result, and throwing ArgumentOutOfRangeException naming the multiple parameter when multiple is zero or negative.",
+      "files": [
+        "src/Rounding.cs"
+      ]
+    },
+    {
+      "id": "T2",
+      "summary": "Add xUnit tests in tests/unit/RoundingTests.cs covering CeilingTo on positive values, including the case where value is already an exact multiple and is returned unchanged.",
+      "files": [
+        "tests/unit/RoundingTests.cs"
+      ]
+    },
+    {
+      "id": "T3",
+      "summary": "Add xUnit tests in tests/unit/RoundingTests.cs covering CeilingTo on negative values, including CeilingTo(-7, 5) equals -5 and the boundary where value exactly equals a negative multiple.",
+      "files": [
+        "tests/unit/RoundingTests.cs"
+      ]
+    },
+    {
+      "id": "T4",
+      "summary": "Add xUnit tests in tests/unit/RoundingTests.cs asserting CeilingTo throws ArgumentOutOfRangeException naming the multiple parameter when multiple is zero or negative, and does not throw when multiple is the smallest positive decimal.",
+      "files": [
+        "tests/unit/RoundingTests.cs"
+      ]
+    },
+    {
+      "id": "T5",
+      "summary": "Add xUnit tests in tests/unit/RoundingTests.cs verifying the return value's decimal scale matches the scale of multiple, e.g. CeilingTo(1.0m, 0.25m) returns 1.00, and a zero-scale multiple produces a zero-scale result, checked via decimal.GetBits.",
+      "files": [
+        "tests/unit/RoundingTests.cs"
+      ]
+    }
+  ]
+}
