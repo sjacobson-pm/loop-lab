@@ -23,6 +23,11 @@ on:
         description: Story id, e.g. US-001
         required: true
         type: string
+      fixture:
+        description: Unused by this leg. Declared so the conductor can dispatch uniformly
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
