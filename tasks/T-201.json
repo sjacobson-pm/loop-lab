@@ -1,0 +1,24 @@
+{
+  "task_id": "T-201",
+  "created_at": "2026-09-18T20:35:36.088Z",
+  "fixture": null,
+  "status": "running",
+  "current_leg": "plan",
+  "total": 1,
+  "cycles": {},
+  "signatures": {},
+  "history": [
+    {
+      "at": "2026-09-18T20:35:36.088Z",
+      "attempt": 1,
+      "leg": "plan",
+      "outcome": null,
+      "signature": null,
+      "decision": "run",
+      "reason": "task started",
+      "run_id": null,
+      "controller_run_id": "35392282222"
+    }
+  ],
+  "story": "US-001"
+}
