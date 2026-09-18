@@ -53,12 +53,9 @@ tools:
     - "cat"
     - "mkdir"
 
-# Declared write scope. NOT currently enforced: gh-aw v0.88.7 compiles the
-# copilot engine with --allow-all-paths --add-dir $GITHUB_WORKSPACE, so the
-# agent can write anywhere in the workspace. Scope is enforced by detection
-# in the Commit plan post-step, which fails the leg on any change outside
-# plans/. Kept here so intent is declared and so enforcement resumes if a
-# future gh-aw version honors it.
+# allowWrite does not survive compilation: the agent runs with --allow-all-paths.
+# Scope is therefore detected here rather than prevented by the sandbox.
+# plans/ is the agent's output; verdict.json is written by the gate step above, not by the agent.
 sandbox:
   agent:
     config:
@@ -109,7 +106,7 @@ post-steps:
       # allowWrite does not survive compilation: the agent runs with --allow-all-paths.
       # Scope is therefore detected here rather than prevented by the sandbox.
       # Anything outside plans/ is a scope violation and the plan is not trustworthy.
-      STRAY="$(git status --porcelain -- . ':(exclude)plans' | head -20)"
+      STRAY="$(git status --porcelain -- . ':(exclude)plans' ':(exclude)verdict.json' | head -20)"
       if [ -n "$STRAY" ]; then
         echo "agent wrote outside plans/:" >&2
         echo "$STRAY" >&2
