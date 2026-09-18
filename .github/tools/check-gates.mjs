@@ -206,6 +206,78 @@ function compare(ledger, expect) {
 }
 
 // ---------------------------------------------------------------------------
+// Built-in checks
+//
+// Not fixture-driven: these exercise operator paths that have no verdict
+// sequence. Kept here rather than in a separate script so one command still
+// covers everything the conductor depends on.
+// ---------------------------------------------------------------------------
+
+function checkHaltRestart() {
+  const problems = [];
+  const dir = mkdtempSync(join(tmpdir(), "loop-check-"));
+  const taskId = "CHK-halt-restart";
+  const start = () =>
+    runDecide(["--task-id", taskId, "--state-dir", dir, "--entry", "stub"]);
+
+  try {
+    mkdirSync(join(dir, "tasks"), { recursive: true });
+
+    const started = start();
+    if (started.decision !== "run")
+      problems.push(`start: got ${started.decision}, want run`);
+
+    const halted = runDecide([
+      "--halt",
+      "--task-id",
+      taskId,
+      "--state-dir",
+      dir,
+      "--reason",
+      "check-gates",
+    ]);
+    if (halted.decision !== "halted")
+      problems.push(`halt: got ${halted.decision}, want halted`);
+    if (!String(halted.reason).includes("was at stub"))
+      problems.push(`halt reason does not name the leg: ${halted.reason}`);
+
+    const stopped = readJson(join(dir, "tasks", `${taskId}.json`));
+    if (stopped.status !== "halted")
+      problems.push(`ledger status after halt: got ${stopped.status}`);
+
+    // The point of halt: a stranded task becomes restartable. Without this
+    // the fresh-start guard refuses forever and the only fix is editing
+    // JSON on the loop-state branch by hand.
+    const restarted = start();
+    if (restarted.decision !== "run")
+      problems.push(`restart: got ${restarted.decision}, want run`);
+
+    const archived = readdirSync(join(dir, "tasks", "archive"));
+    if (archived.length !== 1) {
+      problems.push(`archive holds ${archived.length} files, want 1`);
+    } else if (!archived[0].startsWith(`${taskId}-`)) {
+      // archive() once took one argument and wrote undefined-<stamp>.json,
+      // silently overwriting on the second archive of any task.
+      problems.push(`archive filename lacks the task id: ${archived[0]}`);
+    }
+
+    const fresh = readJson(join(dir, "tasks", `${taskId}.json`));
+    if (fresh.history.length !== 1)
+      problems.push(
+        `restarted ledger carries ${fresh.history.length} history entries, want 1`,
+      );
+  } catch (error) {
+    problems.push(error.message);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+
+  return problems;
+}
+
+const BUILTINS = { "halt-restart": checkHaltRestart };
+
+// ---------------------------------------------------------------------------
 
 const cases = args.ledger
   ? [
@@ -214,24 +286,34 @@ const cases = args.ledger
         ledger: readJson(args.ledger),
       },
     ]
-  : (args.only
-      ? [args.only]
-      : readdirSync(args.expected)
-          .filter((f) => f.endsWith(".json"))
-          .map((f) => basename(f, ".json"))
-    ).map((name) => ({ name }));
+  : [
+      ...(args.only
+        ? [args.only]
+        : readdirSync(args.expected)
+            .filter((f) => f.endsWith(".json"))
+            .map((f) => basename(f, ".json"))
+      ).map((name) => ({ name })),
+
+      ...Object.entries(BUILTINS)
+        .filter(([name]) => !args.only || args.only === name)
+        .map(([name, run]) => ({ name, run })),
+    ];
 
 let failed = 0;
 
 for (const item of cases) {
-  const expect = readJson(join(args.expected, `${item.name}.json`));
   let problems;
 
-  try {
-    const ledger = item.ledger ?? drive(item.name, expect);
-    problems = compare(ledger, expect);
-  } catch (error) {
-    problems = [error.message];
+  if (item.run) {
+    problems = item.run();
+  } else {
+    const expect = readJson(join(args.expected, `${item.name}.json`));
+    try {
+      const ledger = item.ledger ?? drive(item.name, expect);
+      problems = compare(ledger, expect);
+    } catch (error) {
+      problems = [error.message];
+    }
   }
 
   if (problems.length === 0) {

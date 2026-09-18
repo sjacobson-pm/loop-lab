@@ -1,0 +1,34 @@
+{
+  "name": "signature-distinct-values",
+  "description": "Same test, same location, different assertion values. The implementer moved a value without landing on the right one, which is new information. The breaker must not fire. Guards against a bare-number rule in normalizeText, which one collapsed these two and halted repair loops on attempt 2.",
+  "expect": [
+    "run",
+    "run",
+    "pass"
+  ],
+  "entries": [
+    {
+      "outcome": "fail",
+      "facts": {
+        "failing_tests": [
+          "Rounding.CeilingToTests.RoundsUp"
+        ],
+        "error_kind": "assertion",
+        "error_text": "Expected 3 but was 2 at /home/runner/work/loop-lab/src/Rounding.cs:47 (took 1.2s)" }
+    },
+    {
+      "outcome": "fail",
+      "facts": {
+        "failing_tests": [
+          "Rounding.CeilingToTests.RoundsUp"
+        ],
+        "error_kind": "assertion",
+        "error_text": "Expected 99 but was 42 at /home/runner/work/loop-lab/src/Rounding.cs: 47 (took 1.2s)"
+      }
+    },
+    {
+      "outcome": "pass",
+      "facts": {}
+    }
+  ]
+}
