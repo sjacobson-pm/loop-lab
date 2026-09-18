@@ -43,7 +43,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout conductor sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
           path: conductor
@@ -52,7 +52,7 @@ jobs:
             .loop
 
       - name: Checkout ledger
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: loop-state
           path: state
