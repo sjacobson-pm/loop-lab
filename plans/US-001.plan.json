@@ -1,0 +1,54 @@
+{
+  "story_id": "US-001",
+  "spec_path": "spec/rounding.md",
+  "target_profile": "dotnet-xunit",
+  "criteria": [
+    {
+      "anchor": "spec/rounding.md#ceiling-to-basic",
+      "coverage": "primary",
+      "tasks": ["T1", "T2"]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-negative",
+      "coverage": "primary",
+      "tasks": ["T1", "T3"]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-invalid-multiple",
+      "coverage": "primary",
+      "tasks": ["T1", "T4"]
+    },
+    {
+      "anchor": "spec/rounding.md#ceiling-to-scale",
+      "coverage": "primary",
+      "tasks": ["T1", "T5"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "summary": "Implement public static CeilingTo(decimal value, decimal multiple) in src/Rounding.cs under namespace LoopLab.Rounding, computing the smallest multiple >= value, validating multiple is positive, and preserving the decimal scale of multiple in the result.",
+      "files": ["src/Rounding.cs"]
+    },
+    {
+      "id": "T2",
+      "summary": "Add tests in tests/unit/RoundingTests.cs covering positive values including the exact-multiple boundary case.",
+      "files": ["tests/unit/RoundingTests.cs"]
+    },
+    {
+      "id": "T3",
+      "summary": "Add tests in tests/unit/RoundingTests.cs covering negative values including the exact-negative-multiple boundary case.",
+      "files": ["tests/unit/RoundingTests.cs"]
+    },
+    {
+      "id": "T4",
+      "summary": "Add tests in tests/unit/RoundingTests.cs asserting ArgumentOutOfRangeException with ParamName 'multiple' for zero and negative multiples, and no exception for the smallest positive decimal multiple.",
+      "files": ["tests/unit/RoundingTests.cs"]
+    },
+    {
+      "id": "T5",
+      "summary": "Add tests in tests/unit/RoundingTests.cs verifying the returned decimal's scale via decimal.GetBits matches the scale of the multiple argument, including a zero-scale multiple case.",
+      "files": ["tests/unit/RoundingTests.cs"]
+    }
+  ]
+}
