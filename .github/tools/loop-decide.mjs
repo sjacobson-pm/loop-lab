@@ -41,6 +41,8 @@ const { values: args } = parseArgs({
     fixture: { type: "string", default: "" },
     entry: { type: "string" },
     story: { type: "string" },
+    halt: { type: "boolean", default: false },
+    reason: { type: "string", default: "" },
   },
 });
 
@@ -71,6 +73,24 @@ function die(message) {
   process.exit(1);
 }
 
+function abort(reason) {
+  ledger.history.push({
+    at: new Date().toISOString(),
+    attempt: ledger.total,
+    leg: ledger.current_leg,
+    outcome: null,
+    signature: null,
+    decision: "error",
+    reason,
+    run_id: args["run-id"] || null,
+    controller_run_id: args["conductor-run-id"] || null,
+  });
+  ledger.status = "error";
+  save(path, ledger);
+  console.error(`loop-decide: ${reason}`);
+  process.exit(1);
+}
+
 function readJson(path) {
   try {
     return JSON.parse(readFileSync(path, "utf8"));
@@ -79,33 +99,46 @@ function readJson(path) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Signature normalization
-//
 // Collapses the incidental parts of a failure so that "the same thing failed
-// the same way" produces the same string. Deliberately aggressive: a false
-// match halts a loop that might have recovered, which costs one manual
-// restart. A false miss lets an unproductive loop burn its whole budget.
+// the same way" produces the same string.
 //
-// Note: the two path branches disagree. `[A-Za-z]:\\[^\s:]+` consumes the
-// filename; `\/[^\s:]+\/` stops at the last slash and leaves it. So
-// C:\src\Rounding.cs and /src/Rounding.cs do not produce the same signature.
-// CI is always POSIX so this is currently harmless, but a local repro of a
-// CI failure will not match. Fix by making both preserve the basename.
-// ---------------------------------------------------------------------------
-
+// Two rules are deliberately narrow, and reverting either will collapse real
+// assertion values:
+//   - durations require a lead-in word (in/after/took/elapsed/duration) or
+//     bracket wrapping. This domain asserts on durations, so a bare "25m" is
+//     a value, not noise.
+//   - hex runs require both a letter and a digit, so English words in [a-f]
+//     and large integers survive into the signature.
+//
+// There is no bare-number rule.
+//
+// Rule of thumb: if a token could be an asserted value, it stays.
 function normalizeText(input) {
   return String(input ?? "")
-    .replace(/[A-Za-z]:\\[^\s:]+|\/[^\s:]+\//g, "<path>") // win + posix paths
+    .replace(/[A-Za-z]:\\[^\s:"']+/g, "<path>") // win paths
+    .replace(/(?:\/[^\s:"'/]+){2,}\/?/g, "<path>") // posix paths, 2+ segments
     .replace(
       /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
       "<guid>",
     )
-    .replace(/\b[0-9a-f]{7,40}\b/gi, "<hex>") // shas, hashes
-    .replace(/\b\d+(\.\d+)?(ms|s|m)\b/g, "<duration>")
-    .replace(/:\d+(:\d+)?\b/g, ":<line>") // file.cs:47, file.cs:47:12
+    .replace(/\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{7,40}\b/gi, "<hex>")
+    .replace(
+      /\b(in|after|took|elapsed|duration:?)\s+\d+(?:\.\d+)?\s?(?:ms|s|sec|secs|seconds|m|min|mins|minutes)\b/gi,
+      "$1 <duration>",
+    )
+    .replace(
+      /[[(]\s*\d+(?:\.\d+)?\s?(?:ms|s|sec|seconds)\s*[\])]/g,
+      "<duration>", // trailing [1.23s] annotations
+    )
+    .replace(
+      /(<path>|[\w.-]+\.(?:cs|js|mjs|ts|tsx|jsx|razor))(?::\d+){1,2}\b/gi,
+      "$1:<line>", // file.cs:47, file.cs:47:12
+    )
     .replace(/\bline \d+\b/gi, "line <line>")
-    .replace(/\b\d{4}-\d{2}-\d{2}[T\s][\d:.]+/g, "<timestamp>")
+    .replace(
+      /\b\d{4}-\d{2}-\d{2}(?:[T ][\d:.]+(?:Z|[+-]\d{2}:?\d{2})?)?/g,
+      "<timestamp>",
+    )
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -114,7 +147,7 @@ function normalizeText(input) {
 function computeSignature(leg, facts, spec) {
   const normalize = NORMALIZERS[spec.normalize];
   if (!normalize)
-    die(`leg "${leg}" declares unknown normalizer "${spec.normalize}"`);
+    abort(`leg "${leg}" declares unknown normalizer "${spec.normalize}"`);
 
   const parts = spec.signature.map(
     (field) => `${field}=${normalize(facts?.[field])}`,
@@ -178,24 +211,6 @@ function emit(decision) {
   process.exit(0);
 }
 
-function abort(reason) {
-  ledger.history.push({
-    at: new Date().toISOString(),
-    attempt: ledger.total,
-    leg: ledger.current_leg,
-    outcome: null,
-    signature: null,
-    decision: "error",
-    reason,
-    run_id: args["run-id"] || null,
-    controller_run_id: args["conductor-run-id"] || null,
-  });
-  ledger.status = "error";
-  save(path, ledger);
-  console.error(`loop-decide: ${reason}`);
-  process.exit(1);
-}
-
 function conclude(decision, reason, nextLeg = null) {
   ledger.history.push({
     at: new Date().toISOString(),
@@ -255,6 +270,50 @@ if (!taskId) die("no task_id from --task-id or verdict");
 const path = ledgerPath(stateDir, taskId);
 let ledger;
 
+// --- Halt ------------------------------------------------------------------
+// Operator escape hatch. A task stuck at `running` cannot be restarted,
+// because the fresh-start guard refuses to archive a live ledger. That
+// happens whenever a leg run dies without producing a verdict: cancelled
+// workflow, runner failure, agent timeout, or a config error that aborted
+// mid-task. Without this the only recovery is hand-editing JSON on the
+// loop-state branch.
+if (args.halt) {
+  if (args.verdict) die("--halt takes no --verdict");
+  if (!existsSync(path)) die(`no ledger for task ${taskId}`);
+  ledger = readJson(path);
+
+  if (ledger.status !== "running" && ledger.status !== "error") {
+    die(`task ${taskId} is already ${ledger.status}; nothing to halt`);
+  }
+
+  const haltedAt = ledger.current_leg;
+  const reason = args.reason.trim() || "halted manually";
+
+  ledger.history.push({
+    at: new Date().toISOString(),
+    attempt: ledger.total,
+    leg: haltedAt,
+    outcome: null,
+    signature: null,
+    decision: "halted",
+    reason,
+    run_id: args["run-id"] || null,
+    controller_run_id: args["conductor-run-id"] || null,
+  });
+  ledger.status = "halted";
+  save(path, ledger);
+
+  emit({
+    task_id: taskId,
+    attempt: ledger.total,
+    next_attempt: null,
+    decision: "halted",
+    next_leg: null,
+    signature: null,
+    reason: `${reason} (was at ${haltedAt ?? "no leg"})`,
+  });
+}
+
 if (fresh) {
   if (existsSync(path)) {
     const prior = readJson(path);
@@ -263,7 +322,7 @@ if (fresh) {
         `task ${taskId} is already running (leg ${prior.current_leg}); halt it before restarting`,
       );
     }
-    archive(path);
+    archive(path, taskId);
   }
   ledger = emptyLedger(taskId);
   ledger.fixture = args.fixture || null;
@@ -320,13 +379,17 @@ if (!outcome) die("verdict is missing outcome");
 
 // Signature only means something for a failure.
 const spec = config.legs[leg].facts;
-if (!spec) die(`leg "${leg}" has no facts declaration in legs.json`);
+if (!spec) abort(`leg "${leg}" has no facts declaration in legs.json`);
+
+const isEmpty = (v) =>
+  v === undefined ||
+  v === null ||
+  (typeof v === "string" && v.trim() === "") ||
+  (Array.isArray(v) && v.length === 0);
 
 let signature = null;
 if (outcome !== "pass") {
-  const missing = spec.required.filter(
-    (f) => verdict.facts?.[f] === undefined || verdict.facts?.[f] === null,
-  );
+  const missing = spec.required.filter((f) => isEmpty(verdict.facts?.[f]));
 
   if (missing.length > 0) {
     abort(`${leg} verdict is missing required facts: ${missing.join(", ")}`);
@@ -353,20 +416,19 @@ if (signature && (ledger.signatures[leg] ?? []).includes(signature)) {
 const transition = config.transitions.find(
   (t) => t.from === leg && t.on === outcome,
 );
-if (!transition) die(`no transition from "${leg}" on "${outcome}"`);
+if (!transition) abort(`no transition from "${leg}" on "${outcome}"`);
 
 if (transition.to === DONE) {
   conclude("pass", `${leg} reported ${outcome}; pipeline complete`);
 }
 
 if (!config.legs[transition.to])
-  die(`transition targets unknown leg "${transition.to}"`);
+  abort(`transition targets unknown leg "${transition.to}"`);
 
 // 3. Budgets. Forward progress is free; only repair cycles are charged.
 if (transition.kind === "backward") {
   const key = `${transition.to}<-${transition.from}`;
   const used = ledger.cycles[key] ?? 0;
-  ledger.cycles[key] = used;
 
   if (used >= config.budgets.cycle) {
     conclude(
