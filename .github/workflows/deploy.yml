@@ -59,7 +59,7 @@ jobs:
 
     steps:
       - name: Download Build Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.WEB_APP_ARTIFACT_NAME }}
           path: ${{ env.AZURE_APP_SERVICE_WEB_APP_PACKAGE_FOLDER }}
