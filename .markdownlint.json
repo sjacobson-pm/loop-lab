@@ -1,0 +1,11 @@
+// https://github.com/DavidAnson/markdownlint
+// https://github.com/DavidAnson/markdownlint?tab=readme-ov-file#options
+
+{
+  "default": true,
+  "line-length": false,
+  "no-duplicate-heading": {
+    "siblings_only": true
+  },
+  "no-inline-html": false
+}

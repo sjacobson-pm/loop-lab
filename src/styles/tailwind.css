@@ -1,0 +1,120 @@
+/*
+ ************************************************************
+ * https://tailwindcss.com/docs/styling-with-utility-classes#using-the-prefix-option
+ * https://tailwindcss.com/docs/preflight#disabling-preflight
+ * https://tailwindcss.com/docs/dark-mode#using-a-data-attribute
+ ************************************************************
+*/
+
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw) important;
+
+/*
+ ************************************************************
+ ! disable preflight to avoid conflicts with bootstrap
+ @import 'tailwindcss/preflight.css' layer(base);
+ ************************************************************
+ */
+
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw);
+@custom-variant dark (&:where([data-bs-theme=dark], [data-bs-theme=dark] *));
+
+/*
+ ************************************************************
+ * theme customizations
+ ************************************************************
+*/
+
+@theme {
+  --font-sans:
+    'Lato', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  --font-serif: 'Rasa', ui-serif, 'Georgia', 'Cambria', 'Times New Roman', 'Times', serif;
+  --font-mono:
+    'Cascadia Mono', ui-monospace, 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New',
+    monospace;
+
+  /* pm gold */
+  --color-pm-gold-50: rgb(var(--pm-gold-50));
+  --color-pm-gold-100: rgb(var(--pm-gold-100));
+  --color-pm-gold-200: rgb(var(--pm-gold-200));
+  --color-pm-gold-300: rgb(var(--pm-gold-300));
+  --color-pm-gold-400: rgb(var(--pm-gold-400));
+  --color-pm-gold-default: rgb(var(--pm-gold-500));
+  --color-pm-gold-500: rgb(var(--pm-gold-500));
+  --color-pm-gold-600: rgb(var(--pm-gold-600));
+  --color-pm-gold-700: rgb(var(--pm-gold-700));
+  --color-pm-gold-800: rgb(var(--pm-gold-800));
+  --color-pm-gold-900: rgb(var(--pm-gold-900));
+  --color-pm-gold-950: rgb(var(--pm-gold-950));
+
+  /* pm orange */
+  --color-pm-orange-50: rgb(var(--pm-orange-50));
+  --color-pm-orange-100: rgb(var(--pm-orange-100));
+  --color-pm-orange-200: rgb(var(--pm-orange-200));
+  --color-pm-orange-300: rgb(var(--pm-orange-300));
+  --color-pm-orange-400: rgb(var(--pm-orange-400));
+  --color-pm-orange-500: rgb(var(--pm-orange-500));
+  --color-pm-orange-default: rgb(var(--pm-orange-600));
+  --color-pm-orange-600: rgb(var(--pm-orange-600));
+  --color-pm-orange-700: rgb(var(--pm-orange-700));
+  --color-pm-orange-800: rgb(var(--pm-orange-800));
+  --color-pm-orange-900: rgb(var(--pm-orange-900));
+  --color-pm-orange-950: rgb(var(--pm-orange-950));
+
+  /* pm teal */
+  --color-pm-teal-50: rgb(var(--pm-teal-50));
+  --color-pm-teal-100: rgb(var(--pm-teal-100));
+  --color-pm-teal-200: rgb(var(--pm-teal-200));
+  --color-pm-teal-300: rgb(var(--pm-teal-300));
+  --color-pm-teal-400: rgb(var(--pm-teal-400));
+  --color-pm-teal-500: rgb(var(--pm-teal-500));
+  --color-pm-teal-default: rgb(var(--pm-teal-600));
+  --color-pm-teal-600: rgb(var(--pm-teal-600));
+  --color-pm-teal-700: rgb(var(--pm-teal-700));
+  --color-pm-teal-800: rgb(var(--pm-teal-800));
+  --color-pm-teal-900: rgb(var(--pm-teal-900));
+  --color-pm-teal-950: rgb(var(--pm-teal-950));
+
+  /* pm blue */
+  --color-pm-blue-50: rgb(var(--pm-blue-50));
+  --color-pm-blue-100: rgb(var(--pm-blue-100));
+  --color-pm-blue-200: rgb(var(--pm-blue-200));
+  --color-pm-blue-300: rgb(var(--pm-blue-300));
+  --color-pm-blue-400: rgb(var(--pm-blue-400));
+  --color-pm-blue-500: rgb(var(--pm-blue-500));
+  --color-pm-blue-600: rgb(var(--pm-blue-600));
+  --color-pm-blue-700: rgb(var(--pm-blue-700));
+  --color-pm-blue-800: rgb(var(--pm-blue-800));
+  --color-pm-blue-default: rgb(var(--pm-blue-900));
+  --color-pm-blue-900: rgb(var(--pm-blue-900));
+  --color-pm-blue-950: rgb(var(--pm-blue-950));
+
+  /* pm slate */
+  --color-pm-slate-50: rgb(var(--pm-slate-50));
+  --color-pm-slate-100: rgb(var(--pm-slate-100));
+  --color-pm-slate-200: rgb(var(--pm-slate-200));
+  --color-pm-slate-300: rgb(var(--pm-slate-300));
+  --color-pm-slate-400: rgb(var(--pm-slate-400));
+  --color-pm-slate-500: rgb(var(--pm-slate-500));
+  --color-pm-slate-600: rgb(var(--pm-slate-600));
+  --color-pm-slate-700: rgb(var(--pm-slate-700));
+  --color-pm-slate-default: rgb(var(--pm-slate-800));
+  --color-pm-slate-800: rgb(var(--pm-slate-800));
+  --color-pm-slate-900: rgb(var(--pm-slate-900));
+  --color-pm-slate-950: rgb(var(--pm-slate-950));
+
+  /* pm granite */
+  --color-pm-granite-50: rgb(var(--pm-granite-50));
+  --color-pm-granite-100: rgb(var(--pm-granite-100));
+  --color-pm-granite-200: rgb(var(--pm-granite-200));
+  --color-pm-granite-300: rgb(var(--pm-granite-300));
+  --color-pm-granite-400: rgb(var(--pm-granite-400));
+  --color-pm-granite-500: rgb(var(--pm-granite-500));
+  --color-pm-granite-default: rgb(var(--pm-granite-600));
+  --color-pm-granite-600: rgb(var(--pm-granite-600));
+  --color-pm-granite-700: rgb(var(--pm-granite-700));
+  --color-pm-granite-800: rgb(var(--pm-granite-800));
+  --color-pm-granite-900: rgb(var(--pm-granite-900));
+  --color-pm-granite-950: rgb(var(--pm-granite-950));
+}

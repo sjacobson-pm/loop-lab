@@ -1,0 +1,42 @@
+// ************************************************************
+// * customizations for the react-autosuggest component
+// ************************************************************
+
+.react-autosuggest-suggestions-container {
+  display: none;
+}
+
+.react-autosuggest-suggestions-container-open {
+  display: block;
+  position: absolute;
+  margin-top: 0;
+  max-width: 90%;
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  z-index: 3;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.react-autosuggest-suggestions-list {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+.react-autosuggest-suggestion {
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+}
+
+.react-autosuggest-suggestion-highlighted {
+  background-color: rgb(var(--pm-slate-800));
+  color: rgb(var(--white));
+}
+
+[data-bs-theme='dark'] {
+  .react-autosuggest-suggestion-highlighted {
+    background-color: rgb(var(--pm-slate-300));
+    color: rgb(var(--black));
+  }
+}

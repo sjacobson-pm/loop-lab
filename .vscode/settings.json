@@ -1,5 +1,175 @@
 {
-    "github.copilot.enable": {
-        "markdown": true
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  "git.inputValidation": true,
+  "git.inputValidationSubjectLength": 70,
+  "git.inputValidationLength": 70,
+  "git.showActionButton": {
+    "commit": true,
+    "publish": false,
+    "sync": false
+  },
+  "git.suggestSmartCommit": false,
+
+  "javascript.preferences.importModuleSpecifier": "non-relative",
+
+  /************************************************************************
+    language-specific settings
+  ************************************************************************/
+
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+
+  "[javascript]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
     }
+  },
+
+  "[javascriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+
+  "[markdown]": {
+    "editor.wordWrap": "off",
+    "diffEditor.ignoreTrimWhitespace": false
+  },
+
+  /************************************************************************
+    extensions settings
+  ************************************************************************/
+
+  // **************************************************
+  // * Better Comments
+
+  "better-comments.multilineComments": true,
+  "better-comments.highlightPlainText": true,
+  "better-comments.tags": [
+    {
+      "mob-name": "alert",
+      "tag": "!",
+      "color": "#FF2D00",
+      "strikethrough": false,
+      "bold": false,
+      "italic": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "mob-name": "question",
+      "tag": "?",
+      "color": "#FFFF00",
+      "strikethrough": false,
+      "bold": false,
+      "italic": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "mob-name": "disabled",
+      "tag": "//",
+      "color": "#474747",
+      "strikethrough": true,
+      "bold": false,
+      "italic": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "mob-name": "todo",
+      "tag": "todo",
+      "color": "#FF8C00",
+      "strikethrough": false,
+      "bold": false,
+      "italic": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "mob-name": "highlight",
+      "tag": "*",
+      "color": "#98C379",
+      "strikethrough": false,
+      "bold": false,
+      "italic": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "mob-name": "url",
+      "tag": "`",
+      "color": "#3498DB",
+      "strikethrough": false,
+      "bold": false,
+      "italic": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "mob-name": "done",
+      "tag": "done",
+      "color": "#00FF00",
+      "strikethrough": false,
+      "bold": false,
+      "italic": false,
+      "backgroundColor": "transparent"
+    }
+  ],
+
+  // **************************************************
+  // * Code Spell Checker
+
+  "cSpell.diagnosticLevel": "Information",
+  "cSpell.minWordLength": 4,
+
+  // **************************************************
+  // * Github Copilot
+
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    { "text": "Subject line must be 70 characters or less." },
+    { "text": "Start the subject line with a capital letter." },
+    { "text": "Do not end the subject line with a period." },
+    { "text": "Use the imperative mood in the subject line." },
+    {
+      "text": "If a body is present, separate it from the subject line with a blank line."
+    },
+    { "text": "If a body is present, wrap the body at 70 characters." },
+    {
+      "text": "If a body is present, and there are multiple items, use a bullet list."
+    },
+    { "text": "Each bullet point should be no more than 65 characters." }
+  ],
+
+  // **************************************************
+  // * Markdown All in One
+
+  "markdown.extension.italic.indicator": "_",
+  "markdown.extension.orderedList.autoRenumber": true,
+  "markdown.extension.orderedList.marker": "one",
+  "markdown.extension.preview.autoShowPreviewToSide": false,
+  "markdown.extension.tableFormatter.enabled": true,
+  "markdown.extension.toc.slugifyMode": "github",
+  "markdown.extension.toc.omittedFromToc": {},
+  "markdown.extension.toc.levels": "2..4",
+  "markdown.extension.toc.orderedList": false,
+  "markdown.extension.toc.plaintext": false,
+  "markdown.extension.toc.unorderedList.marker": "-",
+  "markdown.extension.toc.updateOnSave": false,
+
+  // **************************************************
+  // * Stylelint
+
+  "stylelint.validate": ["css", "scss"],
+
+  // **************************************************
+  // * Tailwind Fold
+
+  "tailwind-fold.autoFold": true,
+  "tailwind-fold.foldedText": "...",
+  "tailwind-fold.foldedTextBackgroundColor": "",
+  "tailwind-fold.foldedTextColor": "#00BFF9",
+  "tailwind-fold.foldLengthThreshold": 10,
+  "tailwind-fold.foldStyle": "QUOTES",
+  "tailwind-fold.showTailwindImage": false,
+  "tailwind-fold.unfoldedTextOpacity": 1,
+  "tailwind-fold.unfoldIfLineSelected": true
 }

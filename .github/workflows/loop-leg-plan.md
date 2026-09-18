@@ -29,6 +29,9 @@ on:
         type: string
         default: ""
 
+# gh-aw strict mode forbids contents: write.
+# The Commit plan post-step pushed with LOOP_COMMIT_TOKEN, a fine-grained PAT scoped to this repo with Contents: read and write.
+# The agent has no git tool and the sandbox exits before post-steps run, so the token is never reachable from inside the agent.
 permissions:
   contents: read
 
@@ -50,8 +53,12 @@ tools:
     - "cat"
     - "mkdir"
 
-# Structural scope enforcement. The planner cannot write outside plans/,
-# so it cannot touch src/, tests/, spec/, or its own tooling.
+# Declared write scope. NOT currently enforced: gh-aw v0.88.7 compiles the
+# copilot engine with --allow-all-paths --add-dir $GITHUB_WORKSPACE, so the
+# agent can write anywhere in the workspace. Scope is enforced by detection
+# in the Commit plan post-step, which fails the leg on any change outside
+# plans/. Kept here so intent is declared and so enforcement resumes if a
+# future gh-aw version honors it.
 sandbox:
   agent:
     config:
@@ -78,6 +85,49 @@ post-steps:
         --attempt "${ATTEMPT}" \
         --out verdict.json
       jq . verdict.json | tee -a "$GITHUB_STEP_SUMMARY"
+
+  - name: Commit plan
+    if: always()
+    env:
+      ATTEMPT: ${{ inputs.attempt }}
+      LOOP_COMMIT_TOKEN: ${{ secrets.LOOP_COMMIT_TOKEN }}
+      STORY: ${{ inputs.story }}
+      TASK_ID: ${{ inputs.task_id }}
+    run: |
+      set -euo pipefail
+
+      # Blocked plans are a legitimate outcome, not a leg failure, so this
+      # reads the verdict rather than relying on the gate step's exit code.
+      if [ ! -f verdict.json ] || [ "$(jq -r .outcome verdict.json)" != "pass" ]; then
+        echo "verdict is not a pass; nothing to commit"
+        exit 0
+      fi
+
+      PLAN="plans/${STORY}.plan.json"
+      [ -f "$PLAN" ] || { echo "verdict passed but $PLAN is missing" >&2; exit 1; }
+
+      # allowWrite does not survive compilation: the agent runs with --allow-all-paths.
+      # Scope is therefore detected here rather than prevented by the sandbox.
+      # Anything outside plans/ is a scope violation and the plan is not trustworthy.
+      STRAY="$(git status --porcelain -- . ':(exclude)plans' | head -20)"
+      if [ -n "$STRAY" ]; then
+        echo "agent wrote outside plans/:" >&2
+        echo "$STRAY" >&2
+        exit 1
+      fi
+
+      git config user.name "looper[bot]"
+      git config user.email "looper@users.noreply.github.com"
+      git add "$PLAN"
+      if git diff --cached --quiet; then
+        echo "plan unchanged; nothing to commit"
+        exit 0
+      fi
+      git commit -m "plan: ${STORY} (task ${TASK_ID}, attempt ${ATTEMPT})"
+
+      # Serialized by the workflows' concurrency group, so not contention with a concurrent plan leg.
+      # The conductor writes loop-state only.
+      git push "https://x-access-token:${LOOP_COMMIT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
 
   - name: Upload verdict
     uses: actions/upload-artifact@v4
@@ -189,4 +239,3 @@ Valid `reason_code` values: `missing_anchor`, `contradictory_criteria`,
 
 Report being blocked rather than guessing. A plan built on a criterion you
 could not verify is worse than no plan.
-

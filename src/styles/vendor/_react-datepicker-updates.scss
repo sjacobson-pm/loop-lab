@@ -1,0 +1,15 @@
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker-popper {
+  z-index: 3;
+}
+
+fieldset:disabled {
+  // disable pointer events within disabled fieldset for
+  // - react-datepicker input
+  .react-datepicker-wrapper input.form-control {
+    pointer-events: none;
+  }
+}

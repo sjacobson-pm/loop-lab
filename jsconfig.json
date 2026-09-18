@@ -1,0 +1,21 @@
+/**
+ * @see https://code.visualstudio.com/docs/languages/jsconfig
+ *
+ * @see https://medium.com/@pushplaybang/absolutely-dont-use-relative-paths-imports-in-your-vite-react-project-c8593f93bbea
+ */
+{
+  "$schema": "https://json.schemastore.org/jsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "apis/*": ["src/apis/*"],
+      "configs/*": ["./src/configs/*"],
+      "features/*": ["./src/features/*"],
+      "hooks/*": ["./src/hooks/*"],
+      "pages/*": ["./src/pages/*"],
+      "utils/*": ["./src/utils/*"],
+      "store/*": ["./src/store/*"],
+      "testing/*": ["./src/__testing__/*"]
+    }
+  }
+}

@@ -1,0 +1,66 @@
+name: Unit Tests
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'src/**'
+
+  push:
+    branches:
+      - develop
+    paths:
+      - 'src/**'
+
+  workflow_dispatch:
+
+concurrency:
+  group: unit-tests--${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-test-react-app:
+    name: Unit Test the React App
+    runs-on: ubuntu-latest
+
+    env:
+      CODE_COVERAGE_FOLDER: coverage # ----- the folder in which the code coverage files reside
+      NODE_VERSION: 22.x # ----------------- the version of node.js to use for the build
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup .npmrc
+        run: |
+          echo "@awesome.me:registry=https://npm.fontawesome.com/"                           >> .npmrc
+          echo "@fortawesome:registry=https://npm.fontawesome.com/"                          >> .npmrc
+          echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONT_AWESOME_PKG_MGR_TOKEN }}" >> .npmrc
+
+      - name: Cache Node Modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm run test:coverage
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./${{ env.CODE_COVERAGE_FOLDER }}
+          fail_ci_if_error: true
+          verbose: true

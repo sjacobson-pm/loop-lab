@@ -1,0 +1,112 @@
+.side-bar {
+  height: 100%;
+  width: var(--side-bar-min-width);
+  overflow: hidden auto;
+  transition: width;
+  transition-duration: var(--side-bar-transition-duration);
+  background-color: var(--side-bar-bg-color);
+  border-right: 1px solid var(--side-bar-border-color);
+  display: flex;
+  flex-direction: column;
+
+  &::-webkit-scrollbar-track {
+    background-color: var(--side-bar-scrollbar-track-color-default);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--side-bar-scrollbar-thumb-color-default);
+  }
+
+  &:hover {
+    &::-webkit-scrollbar-track {
+      background-color: var(--side-bar-scrollbar-track-color-hover);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--side-bar-scrollbar-thumb-color-hover);
+    }
+  }
+
+  &.collapsed {
+    /* narrow scrollbar width when the side-bar is collapsed */
+    &::-webkit-scrollbar {
+      width: calc(var(--scrollbar-width) / 2);
+    }
+  }
+
+  &.expanded {
+    width: var(--side-bar-max-width);
+    transition-duration: var(--side-bar-transition-duration);
+
+    /* standard scrollbar width when the side-bar is expanded */
+    &::-webkit-scrollbar {
+      width: var(--scrollbar-width);
+    }
+  }
+
+  .side-bar-menu-item {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    color: var(--side-bar-menu-item-color);
+    flex-grow: 0;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-start;
+    align-items: center;
+
+    --fa-counter-scale: 0.45;
+    --fa-counter-padding: 0.25rem 0.25rem 0.375rem 0.25rem;
+
+    /* each menu-item that is not .filler should have the pointer cursor */
+    &:not(.filler) {
+      cursor: pointer;
+    }
+
+    &.filler {
+      flex-grow: 1;
+      cursor: default;
+    }
+
+    &:hover {
+      text-decoration: none;
+
+      /*
+        only set the background color for menu-item(s) on hover
+        that are not .filler and not .active and not .expander
+      */
+      &:not(.filler, .active, .expander) {
+        background-color: var(--side-bar-menu-item-bg-color-hover);
+      }
+    }
+
+    /*
+      making this global because it applies to both MenuItem and LinkMenuItem
+      and since LinkMenuItem uses NavLink (from react-router), the 'active' class
+      is applied automatically by NavLink when the link is active
+    */
+    :global(&.active) {
+      background-color: var(--side-bar-menu-item-bg-color-active);
+      color: var(--side-bar-menu-item-color-active);
+    }
+
+    &.invalid {
+      --fa-counter-background-color: var(--side-bar-menu-item-invalid-counter-bg-color);
+      --fa-inverse: var(--side-bar-menu-item-invalid-counter-color);
+    }
+
+    .side-bar-menu-item-icon {
+      font-size: 1.5rem;
+      min-width: var(--side-bar-min-width);
+      text-align: center;
+      flex-grow: 0;
+    }
+
+    .side-bar-menu-item-label {
+      white-space: nowrap;
+      overflow-x: hidden;
+      text-overflow: ellipsis;
+      margin-right: 0.25rem;
+      flex-grow: 1;
+    }
+  }
+}

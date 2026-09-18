@@ -1,0 +1,126 @@
+name: Deploy the React app
+run-name: >
+  ${{ github.event_name == 'workflow_dispatch'
+      && format('Deploy {0} to {1}', inputs.versionTag, inputs.environment)
+      || (github.event_name == 'push'
+          && format('Deploy develop branch (commit {0}) to development', github.sha)
+         )
+  }}
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: quality-assurance
+        type: choice
+        options:
+          - quality-assurance
+          - staging
+          - production
+      versionTag:
+        description: 'Release tag to publish (e.g. v1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write # ----- required to push commits to gh-pages, move environment tags, and mark GitHub releases as latest
+
+concurrency:
+  group: build-and-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WEB_APP_ARTIFACT_NAME: react-app-artifact # ----- the name of the web app artifact to be used in the deployment
+
+jobs:
+  build-react-app:
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: ${{ inputs.environment }}
+      versionTag: ${{ inputs.versionTag || github.sha }}
+    secrets: inherit
+
+  deploy-app-to-app-service:
+    name: Deploy the React App to Azure App Service
+    runs-on: [self-hosted, windows, x64]
+    needs: [build-react-app]
+    environment: ${{ inputs.environment || 'development' }}
+
+    env:
+      AZURE_APP_SERVICE_NAME: ${{ vars.AZURE_APP_SERVICE_NAME }} # --------------------------------------------------- the name of the azure app service for the front end
+      AZURE_APP_SERVICE_WEB_APP_PACKAGE_FOLDER: app-service-web-app-package # ---------------------------------------- the folder in which to store the app service web app package when downloaded from github artifacts
+      AZURE_KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }} # ------------------------------------------------------- the name of the key vault from which to fetch secrets
+      AZURE_KEY_VAULT_SECRET_NAME__FE_PUBLISH_PROFILE: ${{ vars.PUBLISH_PROFILE_AZURE_KEY_VAULT_SECRET_NAME }} # ----- the name of the secret for the front end publish profile
+
+    steps:
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.WEB_APP_ARTIFACT_NAME }}
+          path: ${{ env.AZURE_APP_SERVICE_WEB_APP_PACKAGE_FOLDER }}
+
+      - name: Login to Azure
+        run: az login --identity
+
+      - name: Fetch Web App Publish Profile from Azure Key Vault
+        id: fetch_web_publish_profile
+        uses: azure/get-keyvault-secrets@v1
+        with:
+          keyvault: ${{ env.AZURE_KEY_VAULT_NAME }}
+          secrets: ${{ env.AZURE_KEY_VAULT_SECRET_NAME__FE_PUBLISH_PROFILE }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_APP_SERVICE_NAME }}
+          publish-profile: ${{ steps.fetch_web_publish_profile.outputs[format('{0}', env.AZURE_KEY_VAULT_SECRET_NAME__FE_PUBLISH_PROFILE)] }}
+          package: ${{ env.AZURE_APP_SERVICE_WEB_APP_PACKAGE_FOLDER }}
+
+  update-release-to-latest:
+    name: Update Release ${{ inputs.versionTag }} to be the Latest Release
+    runs-on: ubuntu-latest
+    needs: deploy-app-to-app-service
+    if: ${{ inputs.environment == 'production' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Mark GitHub Release as Latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit ${{ inputs.versionTag }} --prerelease=false
+          set -e
+          gh release edit ${{ inputs.versionTag }} --prerelease=false --latest
+
+  move-commit-hash-of-environment-tag:
+    name: Move Commit Hash of Environment Tag
+    runs-on: ubuntu-latest
+    needs: deploy-app-to-app-service
+    if: ${{ github.event_name != 'push' && inputs.environment != '' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move Commit Hash of Environment Tag
+        run: |
+          VERSION_TAG_COMMIT=$(git rev-list -n 1 "${{ inputs.versionTag }}")
+          if git rev-parse "${{ inputs.environment }}" >/dev/null 2>&1; then
+            echo "Tag ${{ inputs.environment }} exists. Moving it to commit $VERSION_TAG_COMMIT."
+            git tag -f ${{ inputs.environment }} "$VERSION_TAG_COMMIT"
+            git push --force origin ${{ inputs.environment }}
+          else
+            echo "Tag ${{ inputs.environment }} does not exist. Creating it."
+            git tag ${{ inputs.environment }} "$VERSION_TAG_COMMIT"
+            git push origin ${{ inputs.environment }}
+          fi
+          echo "Tag ${{ inputs.environment }} now points to commit $VERSION_TAG_COMMIT."

@@ -1,0 +1,25 @@
+{
+  // * Workspace recommended extensions
+  // * Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
+  // ` https://code.visualstudio.com/docs/editor/extension-gallery#_workspace-recommended-extensions
+
+  // * List of extensions which should be recommended for users of this workspace.
+  "recommendations": [
+    "aaron-bond.better-comments", // * Better Comments
+    "bierner.github-markdown-preview", // * GitHub Markdown Preview
+    "bradlc.vscode-tailwindcss", // * Tailwind CSS IntelliSense
+    "davidanson.vscode-markdownlint", // * markdownlint
+    "dbaeumer.vscode-eslint", // * ESLint
+    "editorconfig.editorconfig", // * EditorConfig for VS Code
+    "esbenp.prettier-vscode", // * Prettier - Code Formatter
+    "mikestead.dotenv", // * DotENV
+    "stivo.tailwind-fold", // * Tailwind Fold
+    "streetsidesoftware.code-spell-checker", // * Code Spell Checker
+    "stylelint.vscode-stylelint", // * stylelint
+    "vitest.explorer", // * Vitest
+    "yzhang.markdown-all-in-one" // * Markdown All in One
+  ],
+
+  // * List of extensions recommended by VS Code that should not be recommended for users of this workspace.
+  "unwantedRecommendations": []
+}

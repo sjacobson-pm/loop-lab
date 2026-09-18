@@ -1,0 +1,40 @@
+// ************************************************************
+// * customizations for the tanstack-query devtools extension
+// ************************************************************
+
+.tsqd-open-btn-container {
+  box-shadow: none !important;
+  border-radius: 0 !important;
+
+  > div {
+    display: none;
+  }
+
+  &:focus-within {
+    outline: none !important;
+  }
+
+  .tsqd-open-btn {
+    // hide their svg logo that is used for the open button
+    > svg {
+      display: none;
+    }
+
+    // create our own open button with a custom icon
+    &::before {
+      content: '';
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      opacity: 0.15;
+      mask-image: var(--svg-url-flux-capacitor);
+      mask-repeat: no-repeat;
+      mask-position: center;
+      background-color: var(--bs-black);
+
+      [data-bs-theme='dark'] & {
+        background-color: var(--bs-white);
+      }
+    }
+  }
+}

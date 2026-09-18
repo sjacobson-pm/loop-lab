@@ -1,36 +1,47 @@
-name: "Copilot Setup Steps"
+name: Copilot Environment Setup
 
-# This workflow configures the environment for GitHub Copilot Agent with gh-aw MCP server
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
 on:
-  workflow_dispatch:
-  push:
+  pull_request:
+    branches:
+      - develop
     paths:
       - .github/workflows/copilot-setup-steps.yml
 
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
-  # The job MUST be called 'copilot-setup-steps' to be recognized by GitHub Copilot Agent
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
   copilot-setup-steps:
     name: Copilot Setup Steps
     runs-on: ubuntu-latest
 
-    # Set minimal permissions for setup steps
-    # Copilot Agent receives its own token with appropriate permissions
+    # Set the permissions to the lowest permissions possible needed for the steps below.
+    # Copilot will be given its own token for its operations.
     permissions:
       contents: read
 
+    env:
+      NODE_VERSION: 22.x # ----- the version of node.js to use
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout Repository
+        uses: actions/checkout@v5
         with:
-          persist-credentials: false
-      - name: Install gh-aw extension
-        uses: github/gh-aw-actions/setup-cli@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
+          fetch-depth: 0 # -- fetch full repository history (not shallow clone)
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
         with:
-          version: v0.88.7
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup .npmrc
+        run: |
+          echo "@awesome.me:registry=https://npm.fontawesome.com/"                           >> .npmrc
+          echo "@fortawesome:registry=https://npm.fontawesome.com/"                          >> .npmrc
+          echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONT_AWESOME_PKG_MGR_TOKEN }}" >> .npmrc
+
+      - name: Install npm Dependencies
+        run: npm ci

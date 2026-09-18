@@ -1,0 +1,204 @@
+@import 'sass-variables';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+// ********************************************************************************
+// * anchors
+// ********************************************************************************
+
+a {
+  [data-bs-theme='light'] & {
+    color: rgb(var(--pm-blue-400));
+  }
+
+  [data-bs-theme='dark'] & {
+    color: rgb(var(--pm-blue-500));
+  }
+
+  text-decoration: none !important;
+
+  &:hover {
+    text-decoration: dashed underline 1px;
+  }
+
+  &:focus,
+  &:visited {
+    text-decoration: none;
+  }
+}
+
+// ********************************************************************************
+// * scroll bars
+// ********************************************************************************
+
+// by default a scrollbar will be unobtrusive and appear slightly dim
+::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-height);
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--scrollbar-track-color-default);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color-default);
+  border-radius: var(--scrollbar-thumb-border-radius);
+}
+
+::-webkit-scrollbar-corner {
+  background-color: var(--scrollbar-corner-color-default);
+}
+
+// when hovering over an element with a scrollbar, make the scrollbar stand out a little more
+:hover {
+  &::-webkit-scrollbar-track {
+    background-color: var(--scrollbar-track-color-hover);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color-hover);
+  }
+
+  &::-webkit-scrollbar-corner {
+    background-color: var(--scrollbar-corner-color-hover);
+  }
+}
+
+// ********************************************************************************
+// * inputs
+// ********************************************************************************
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  display: none;
+}
+
+// ********************************************************************************
+// * selects
+// ********************************************************************************
+
+select {
+  option {
+    &:checked {
+      background-color: rgb(var(--pm-slate-500));
+      color: var(--bs-white);
+    }
+  }
+}
+
+// ********************************************************************************
+// * tables
+// ********************************************************************************
+
+$table-border-color: rgb(var(--pm-slate-200));
+$table-border-color-dark: rgb(var(--pm-slate-700));
+$table-head-bg-color: rgb(var(--pm-slate-500));
+
+table.pm-table {
+  border-color: $table-border-color;
+
+  thead tr {
+    th {
+      background-color: $table-head-bg-color;
+      color: $white;
+
+      &.tooltip-trigger {
+        cursor: help;
+      }
+    }
+  }
+
+  tbody tr {
+    position: relative;
+
+    &.error-message-table-row td {
+      background-color: var(--bs-danger);
+      color: $white;
+    }
+
+    &.loading-message-table-row td {
+      background-color: rgb(var(--pm-slate-100));
+      font-size: 1.125rem;
+    }
+  }
+
+  tr td div.table-row-overlay {
+    // positioning
+    position: absolute;
+    inset: 0;
+
+    // display properties
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+
+    // styling
+    color: $white;
+    font-weight: 600;
+
+    .overlay-message {
+      font-size: 1.125rem;
+    }
+
+    .overlay-message-details {
+      font-size: 0.875rem;
+
+      // display properties
+      display: flex;
+      flex-flow: row nowrap;
+      gap: 0.25rem;
+    }
+  }
+}
+
+[data-bs-theme='dark'] {
+  table {
+    border-color: $table-border-color-dark;
+
+    tbody tr {
+      &.loading-message-table-row td {
+        background-color: rgb(var(--pm-slate-950));
+      }
+    }
+  }
+}
+
+// **********************************************************************
+// * icons
+
+.icon {
+  &.clickable {
+    cursor: pointer;
+  }
+
+  &.hover-info:not(.clickable) {
+    cursor: help;
+  }
+}
+
+fieldset:disabled {
+  .icon {
+    &.clickable {
+      // hide clickable icons within disabled fieldset unless they have
+      // the visible-disabled class (for icon-clickable elements which are visible when disabled)
+      &:not(.visible-disabled) {
+        display: none;
+      }
+
+      // disable pointer events within disabled fieldset when they have
+      // the visible-disabled class (for icon-clickable elements which are visible when disabled)
+      &.visible-disabled {
+        pointer-events: none;
+      }
+    }
+  }
+}
