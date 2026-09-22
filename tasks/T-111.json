@@ -4,9 +4,15 @@
   "fixture": null,
   "status": "running",
   "current_leg": "plan",
-  "total": 1,
-  "cycles": {},
-  "signatures": {},
+  "total": 2,
+  "cycles": {
+    "plan<-plan": 1
+  },
+  "signatures": {
+    "plan": [
+      "plan:1x:a6bffedc8e3b"
+    ]
+  },
   "history": [
     {
       "at": "2026-09-22T17:28:28.585Z",
@@ -18,6 +24,17 @@
       "reason": "task started",
       "run_id": null,
       "controller_run_id": "35760902423"
+    },
+    {
+      "at": "2026-09-22T17:34:37.195Z",
+      "attempt": 1,
+      "leg": "plan",
+      "outcome": "fail",
+      "signature": "plan:1x:a6bffedc8e3b",
+      "decision": "run",
+      "reason": "plan reported fail; routing backward to plan",
+      "run_id": "35760929022",
+      "controller_run_id": "35761582849"
     }
   ],
   "story": "US-003"
