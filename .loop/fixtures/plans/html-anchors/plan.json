@@ -1,20 +1,20 @@
 {
-  "story_id": "US-H02",
+  "story_id": "US-H01",
   "target_profile": "react-vitest",
   "blocked": false,
   "criteria": [
     {
-      "anchor": "tests/fixtures/spec/widget-limits.html#rule-minutes-positive",
+      "anchor": ".loop/fixtures/spec/widget-limits.html#rule-minutes-positive",
       "coverage": "primary",
       "tasks": ["T1"]
     },
     {
-      "anchor": "tests/fixtures/spec/widget-limits.html#rule-step-positive",
+      "anchor": ".loop/fixtures/spec/widget-limits.html#rule-step-positive",
       "coverage": "primary",
       "tasks": ["T2"]
     },
     {
-      "anchor": "tests/fixtures/spec/widget-limits.html#rule-absent-entirely",
+      "anchor": ".loop/fixtures/spec/widget-limits.html#rule-offset-nonneg",
       "coverage": "primary",
       "tasks": ["T3"]
     }
@@ -30,7 +30,7 @@
     },
     {
       "id": "T3",
-      "summary": "Export a validator for the bound the planner did not verify exists."
+      "summary": "Export a validator rejecting widgetOffsetMinutes values below zero, accepting zero."
     }
   ]
 }

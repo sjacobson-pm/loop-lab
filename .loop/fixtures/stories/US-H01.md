@@ -3,7 +3,7 @@ id: US-H01
 title: Widget limit values validate against their spec bounds
 target_repo: loop-lab
 target_profile: react-vitest
-spec_path: tests/fixtures/spec/widget-limits.html
+spec_path: .loop/fixtures/spec/widget-limits.html
 status: ready
 ---
 
@@ -20,9 +20,9 @@ single-quoted.
 
 Cited by anchor. Do not restate.
 
-- `tests/fixtures/spec/widget-limits.html#rule-minutes-positive`
-- `tests/fixtures/spec/widget-limits.html#rule-step-positive`
-- `tests/fixtures/spec/widget-limits.html#rule-offset-nonneg`
+- `.loop/fixtures/spec/widget-limits.html#rule-minutes-positive`
+- `.loop/fixtures/spec/widget-limits.html#rule-step-positive`
+- `.loop/fixtures/spec/widget-limits.html#rule-offset-nonneg`
 
 ## Acceptance criteria
 

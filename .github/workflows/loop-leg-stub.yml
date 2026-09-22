@@ -17,7 +17,7 @@ on:
         type: string
         default: ""
       fixture:
-        description: Name of the sequence under tests/fixtures/sequences
+        description: Name of the sequence under .loop/fixtures/sequences
         required: true
         type: string
 
@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            tests/fixtures/sequences
+            .loop/fixtures/sequences
 
       - name: Emit verdict
         env:
@@ -42,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          FILE="tests/fixtures/sequences/${FIXTURE}.json"
+          FILE=".loop/fixtures/sequences/${FIXTURE}.json"
           if [ ! -f "$FILE" ]; then
               echo "::error::no fixture named '${FIXTURE}' at ${FILE}"
               exit 1

@@ -33,8 +33,8 @@ const { values: args } = parseArgs({
   options: {
     script: { type: "string", default: ".github/tools/loop-decide.mjs" },
     config: { type: "string", default: ".loop/legs.json" },
-    sequences: { type: "string", default: "tests/fixtures/sequences" },
-    expected: { type: "string", default: "tests/fixtures/expected" },
+    sequences: { type: "string", default: ".loop/fixtures/sequences" },
+    expected: { type: "string", default: ".loop/fixtures/expected" },
     entry: { type: "string" },
     case: { type: "string" },
     only: { type: "string" },

@@ -4,9 +4,9 @@
   "outcome": "fail",
   "reason_codes": ["no_distinguishing_task"],
   "at_fault_criteria": [
-    "tests/fixtures/spec/rounding.md#ceiling-to-basic",
-    "tests/fixtures/spec/rounding.md#ceiling-to-invalid-multiple",
-    "tests/fixtures/spec/rounding.md#ceiling-to-negative",
-    "tests/fixtures/spec/rounding.md#ceiling-to-scale"
+    ".loop/fixtures/spec/rounding.md#ceiling-to-basic",
+    ".loop/fixtures/spec/rounding.md#ceiling-to-invalid-multiple",
+    ".loop/fixtures/spec/rounding.md#ceiling-to-negative",
+    ".loop/fixtures/spec/rounding.md#ceiling-to-scale"
   ]
 }

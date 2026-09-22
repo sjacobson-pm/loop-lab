@@ -3,7 +3,7 @@ id: US-H02
 title: Widget limits including an undefined bound
 target_repo: loop-lab
 target_profile: react-vitest
-spec_path: tests/fixtures/spec/widget-limits.html
+spec_path: .loop/fixtures/spec/widget-limits.html
 status: ready
 ---
 
@@ -21,9 +21,9 @@ would let this through.
 
 Cited by anchor. Do not restate.
 
-- `tests/fixtures/spec/widget-limits.html#rule-minutes-positive`
-- `tests/fixtures/spec/widget-limits.html#rule-step-positive`
-- `tests/fixtures/spec/widget-limits.html#rule-absent-entirely`
+- `.loop/fixtures/spec/widget-limits.html#rule-minutes-positive`
+- `.loop/fixtures/spec/widget-limits.html#rule-step-positive`
+- `.loop/fixtures/spec/widget-limits.html#rule-absent-entirely`
 
 ## Acceptance criteria
 

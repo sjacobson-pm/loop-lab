@@ -3,6 +3,6 @@
   "outcome": "fail",
   "reason_codes": ["should_have_blocked"],
   "at_fault_criteria": [
-    "tests/fixtures/spec/widget-limits.html#rule-absent-entirely"
+    ".loop/fixtures/spec/widget-limits.html#rule-absent-entirely"
   ]
 }

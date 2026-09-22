@@ -1,10 +1,10 @@
 {
   "story_id": "US-001",
-  "spec_path": "tests/fixtures/spec/rounding.md",
+  "spec_path": ".loop/fixtures/spec/rounding.md",
   "target_profile": "dotnet-xunit",
   "criteria": [
     {
-      "anchor": "tests/fixtures/spec/rounding.md#ceiling-to-basic",
+      "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-basic",
       "coverage": "primary",
       "tasks": [
         "T1",
@@ -12,7 +12,7 @@
       ]
     },
     {
-      "anchor": "tests/fixtures/spec/rounding.md#ceiling-to-negative",
+      "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-negative",
       "coverage": "primary",
       "tasks": [
         "T1",
@@ -20,7 +20,7 @@
       ]
     },
     {
-      "anchor": "tests/fixtures/spec/rounding.md#ceiling-to-invalid-multiple",
+      "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-invalid-multiple",
       "coverage": "primary",
       "tasks": [
         "T1",
@@ -28,7 +28,7 @@
       ]
     },
     {
-      "anchor": "tests/fixtures/spec/rounding.md#ceiling-to-scale",
+      "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-scale",
       "coverage": "primary",
       "tasks": [
         "T1",

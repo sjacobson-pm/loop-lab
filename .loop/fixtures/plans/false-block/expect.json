@@ -3,5 +3,5 @@
   "story": "US-002",
   "outcome": "fail",
   "reason_codes": ["false_block"],
-  "at_fault_criteria": ["tests/fixtures/spec/rounding.md#ceiling-to-basic"]
+  "at_fault_criteria": [".loop/fixtures/spec/rounding.md#ceiling-to-basic"]
 }

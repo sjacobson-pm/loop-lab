@@ -11,7 +11,7 @@ on:
       - ".github/tools/loop-decide.mjs"
       - ".github/tools/check-gates.mjs"
       - ".loop/legs.json"
-      - "tests/fixtures/**"
+      - ".loop/fixtures/**"
       - ".github/workflows/check-gates.yml"
   push:
     branches:
@@ -24,7 +24,7 @@ on:
       - ".loop/legs.json"
       - "spec/**"
       - "stories/**"
-      - "tests/fixtures/**"
+      - ".loop/fixtures/**"
   workflow_dispatch:
 
 permissions:

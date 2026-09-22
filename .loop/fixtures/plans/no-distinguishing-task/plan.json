@@ -1,0 +1,15 @@
+{
+  "story_id": "US-001",
+  "spec_path": ".loop/fixtures/spec/rounding.md",
+  "target_profile": "dotnet-xunit",
+  "criteria": [
+    { "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-basic", "coverage": "primary", "tasks": ["T1", "T2"] },
+    { "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-negative", "coverage": "primary", "tasks": ["T1", "T2"] },
+    { "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-invalid-multiple", "coverage": "primary", "tasks": ["T1", "T2"] },
+    { "anchor": ".loop/fixtures/spec/rounding.md#ceiling-to-scale", "coverage": "primary", "tasks": ["T1", "T2"] }
+  ],
+  "tasks": [
+    { "id": "T1", "summary": "Implement CeilingTo.", "files": ["src/Rounding.cs"] },
+    { "id": "T2", "summary": "Add unit tests", "files": ["tests/unit/RoundingTests.cs"] }
+  ]
+}

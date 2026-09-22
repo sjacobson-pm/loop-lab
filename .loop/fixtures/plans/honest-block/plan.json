@@ -2,7 +2,7 @@
     "story_id": "US-002",
     "blocked": true,
     "blocked_criteria": [
-        "tests/fixtures/spec/rounding.md#ceiling-to-basic"
+        ".loop/fixtures/spec/rounding.md#ceiling-to-currency"
     ],
     "reason_code": "missing_anchor"
 }

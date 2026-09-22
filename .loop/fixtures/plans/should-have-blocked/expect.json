@@ -3,5 +3,5 @@
   "story": "US-002",
   "outcome": "fail",
   "reason_codes": ["should_have_blocked"],
-  "at_fault_criteria": ["tests/fixtures/spec/rounding.md#ceiling-to-currency"]
+  "at_fault_criteria": [".loop/fixtures/spec/rounding.md#ceiling-to-currency"]
 }

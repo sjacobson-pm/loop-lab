@@ -7,7 +7,7 @@
 //   node .github/tools/check-plan-cases.mjs
 //   node .github/tools/check-plan-cases.mjs --only false-block
 //
-// Each case is a directory under tests/fixtures/plans containing expect.json
+// Each case is a directory under .loop/fixtures/plans containing expect.json
 // and usually plan.json. A case with no plan.json exercises the path where the
 // agent died before writing anything.
 
@@ -20,8 +20,8 @@ import { parseArgs } from 'node:util';
 const { values: args } = parseArgs({
   options: {
     script: { type: 'string', default: '.github/tools/check-plan.mjs' },
-    cases: { type: 'string', default: 'tests/fixtures/plans' },
-    stories: { type: 'string', default: 'tests/fixtures/stories' },
+    cases: { type: 'string', default: '.loop/fixtures/plans' },
+    stories: { type: 'string', default: '.loop/fixtures/stories' },
     only: { type: 'string' },
     verbose: { type: 'boolean', default: false },
   },
