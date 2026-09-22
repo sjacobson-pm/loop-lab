@@ -1,0 +1,44 @@
+{
+  "story_id": "US-003",
+  "spec_path": "spec/pomodoro-workday-timers-spec.html",
+  "target_profile": "react-vitest",
+  "criteria": [
+    {
+      "anchor": "spec/pomodoro-workday-timers-spec.html#rule-pomo-positive",
+      "coverage": "primary",
+      "tasks": ["T1", "T4"]
+    },
+    {
+      "anchor": "spec/pomodoro-workday-timers-spec.html#rule-rounding-positive",
+      "coverage": "primary",
+      "tasks": ["T2", "T4"]
+    },
+    {
+      "anchor": "spec/pomodoro-workday-timers-spec.html#rule-drop-nonnegative",
+      "coverage": "primary",
+      "tasks": ["T3", "T4"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "summary": "Add pomodoroLengthMinutes validator that accepts only integer values strictly greater than zero, rejecting everything else.",
+      "files": ["src/settings/settingsRules.js", "src/settings/settingsRules.test.js"]
+    },
+    {
+      "id": "T2",
+      "summary": "Add roundingIncrementMinutes validator that accepts only values strictly greater than zero.",
+      "files": ["src/settings/settingsRules.js", "src/settings/settingsRules.test.js"]
+    },
+    {
+      "id": "T3",
+      "summary": "Add dropThresholdMinutes validator that accepts zero and any value greater than zero, rejecting negative values.",
+      "files": ["src/settings/settingsRules.js", "src/settings/settingsRules.test.js"]
+    },
+    {
+      "id": "T4",
+      "summary": "Set up the shared settingsRules module and colocated test file scaffolding, exporting a consistent accepted/rejected result shape used by all three validators.",
+      "files": ["src/settings/settingsRules.js", "src/settings/settingsRules.test.js"]
+    }
+  ]
+}
