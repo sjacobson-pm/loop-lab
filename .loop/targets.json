@@ -1,0 +1,29 @@
+{
+  "$schema_version": 1,
+  "targets": {
+    "react-vitest": {
+      "exercised": true,
+      "install": ["npm", "ci"],
+      "test": ["npx", "vitest", "run", "--reporter=json", "--outputFile={{results}}"],
+      "results_format": "vitest-json",
+      "test_pathspecs": [
+        "*.test.js",
+        "*.test.jsx",
+        "src/__testing__/**",
+        "**/__mocks__/**",
+        "vitest.config.*",
+        "vite.config.*"
+      ]
+    },
+    "dotnet-xunit": {
+      "exercised": false,
+      "note": "Declared so US-001 and US-002 resolve. No trx parser exists; a run against this profile will fail at results_format, not silently pass.",
+      "install": ["dotnet", "restore"],
+      "test": ["dotnet", "test", "--logger", "trx;LogFileName={{results}}"],
+      "results_format": "trx",
+      "test_pathspecs": [
+        "tests/**"
+      ]
+    }
+  }
+}
