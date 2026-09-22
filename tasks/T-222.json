@@ -2,7 +2,7 @@
   "task_id": "T-222",
   "created_at": "2026-09-22T20:22:39.550Z",
   "fixture": null,
-  "status": "running",
+  "status": "pass",
   "current_leg": "plan",
   "total": 1,
   "cycles": {},
@@ -18,6 +18,17 @@
       "reason": "task started",
       "run_id": null,
       "controller_run_id": "35779868338"
+    },
+    {
+      "at": "2026-09-22T20:29:28.650Z",
+      "attempt": 1,
+      "leg": "plan",
+      "outcome": "pass",
+      "signature": null,
+      "decision": "pass",
+      "reason": "plan reported pass; pipeline complete",
+      "run_id": "35779889047",
+      "controller_run_id": "35780607016"
     }
   ],
   "story": "US-003"
