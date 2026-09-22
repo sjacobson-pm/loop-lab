@@ -2,7 +2,7 @@
     "story_id": "US-002",
     "blocked": true,
     "blocked_criteria": [
-        "spec/rounding.md#ceiling-to-currency"
+        "tests/fixtures/spec/rounding.md#ceiling-to-currency"
     ],
     "reason_code": "too_hard"
 }

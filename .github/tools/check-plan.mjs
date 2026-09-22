@@ -68,6 +68,22 @@ function citedCriteria(text) {
   return anchors;
 }
 
+// Anchor ids come in two flavours across our spec formats: Pandoc heading
+// attributes in markdown (`{#anchor-id}`) and plain HTML id attributes
+// (`id="anchor-id"`). Match both; a file is only unresolvable if it is absent.
+// Note this matches id= as an attribute value, never by scanning tags - the
+// HTML spec package carries raw `>` inside data-pd-detail, so any `<[^>]*>`
+// approach truncates.
+function anchorIds(file) {
+  if (!existsSync(file)) return null;
+  const text = readFileSync(file, "utf8");
+  const ids = new Set();
+  for (const m of text.matchAll(/\{#([^}\s]+)\}/g)) ids.add(m[1]);
+  for (const m of text.matchAll(/\bid\s*=\s*"([^"]+)"/g)) ids.add(m[1]);
+  for (const m of text.matchAll(/\bid\s*=\s*'([^']+)'/g)) ids.add(m[1]);
+  return ids;
+}
+
 function unresolvedAnchors(anchors) {
   const cache = new Map();
   const absent = [];
@@ -78,13 +94,7 @@ function unresolvedAnchors(anchors) {
     if (!cache.has(file)) {
       cache.set(
         file,
-        existsSync(file)
-          ? new Set(
-              [...readFileSync(file, "utf8").matchAll(/\{#([^}\s]+)\}/g)].map(
-                (m) => m[1],
-              ),
-            )
-          : null,
+        anchorIds(file)
       );
     }
 

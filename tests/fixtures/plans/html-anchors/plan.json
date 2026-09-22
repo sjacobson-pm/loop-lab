@@ -1,0 +1,36 @@
+{
+  "story_id": "US-H01",
+  "target_profile": "react-vitest",
+  "blocked": false,
+  "criteria": [
+    {
+      "anchor": "tests/fixtures/spec/widget-limits.html#rule-minutes-positive",
+      "coverage": "primary",
+      "tasks": ["T1"]
+    },
+    {
+      "anchor": "tests/fixtures/spec/widget-limits.html#rule-step-positive",
+      "coverage": "primary",
+      "tasks": ["T2"]
+    },
+    {
+      "anchor": "tests/fixtures/spec/widget-limits.html#rule-offset-nonneg",
+      "coverage": "primary",
+      "tasks": ["T3"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "summary": "Export a validator rejecting widgetMinutes values that are not strictly positive."
+    },
+    {
+      "id": "T2",
+      "summary": "Export a validator rejecting widgetStepMinutes values that are not strictly positive."
+    },
+    {
+      "id": "T3",
+      "summary": "Export a validator rejecting widgetOffsetMinutes values below zero, accepting zero."
+    }
+  ]
+}

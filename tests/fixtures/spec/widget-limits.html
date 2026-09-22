@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Widget Limits — fixture spec</title>
+</head>
+<body>
+
+<!--
+  Fixture spec for the HTML anchor-resolution branch of check-plan.mjs.
+  Deliberate properties, each load-bearing:
+
+  1. Anchors are plain HTML id attributes, not Pandoc heading-attribute
+     syntax. (This comment deliberately avoids writing that syntax out:
+     the markdown branch of the resolver would match it here.)
+  2. data-pd-detail carries a raw, unescaped ">" character. Any resolver
+     that scans tags with a <[^>]*> style regex truncates here and stops
+     seeing later ids. That is the failure this fixture exists to catch.
+  3. One id is single-quoted, so the resolver cannot assume double quotes.
+  4. rule-absent-entirely is NOT defined anywhere in this file. The
+     html-anchors-missing case cites it on purpose.
+-->
+
+<h1>Widget Limits</h1>
+
+<section data-pd-slot="rules" data-pd-screen="Limits">
+
+  <p id="rule-minutes-positive"
+     data-pd-name="widget-minutes-positive"
+     data-pd-kind="Rule"
+     data-pd-detail="widgetMinutes must be > 0. Server refuses PUT with 400.">
+    Widget minutes must be strictly positive.
+  </p>
+
+  <p id="rule-step-positive"
+     data-pd-name="widget-step-positive"
+     data-pd-kind="Rule"
+     data-pd-detail="widgetStepMinutes must be > 0.">
+    Widget step must be strictly positive.
+  </p>
+
+  <p id='rule-offset-nonneg'
+     data-pd-name="widget-offset-nonneg"
+     data-pd-kind="Rule"
+     data-pd-detail="widgetOffsetMinutes must be >= 0. Zero means no offset.">
+    Widget offset must be zero or greater.
+  </p>
+
+</section>
+
+</body>
+</html>

@@ -11,17 +11,17 @@
 // and usually plan.json. A case with no plan.json exercises the path where the
 // agent died before writing anything.
 
-import { readFileSync, readdirSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const { values: args } = parseArgs({
   options: {
     script: { type: 'string', default: '.github/tools/check-plan.mjs' },
     cases: { type: 'string', default: 'tests/fixtures/plans' },
-    stories: { type: 'string', default: 'stories' },
+    stories: { type: 'string', default: 'tests/fixtures/stories' },
     only: { type: 'string' },
     verbose: { type: 'boolean', default: false },
   },

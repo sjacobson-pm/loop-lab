@@ -3,5 +3,5 @@
   "story": "US-002",
   "outcome": "fail",
   "reason_codes": ["missing_anchor"],
-  "at_fault_criteria": ["spec/rounding.md#ceiling-to-currency"]
+  "at_fault_criteria": ["tests/fixtures/spec/rounding.md#ceiling-to-currency"]
 }

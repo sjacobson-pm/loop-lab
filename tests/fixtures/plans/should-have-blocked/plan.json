@@ -1,24 +1,24 @@
 {
     "story_id": "US-002",
-    "spec_path": "spec/rounding.md",
+    "spec_path": "tests/fixtures/spec/rounding.md",
     "target_profile": "dotnet-xunit",
     "criteria": [
         {
-            "anchor": "spec/rounding.md#ceiling-to-basic",
+            "anchor": "tests/fixtures/spec/rounding.md#ceiling-to-basic",
             "coverage": "primary",
             "tasks": [
                 "T1"
             ]
         },
         {
-            "anchor": "spec/rounding.md#ceiling-to-scale",
+            "anchor": "tests/fixtures/spec/rounding.md#ceiling-to-scale",
             "coverage": "primary",
             "tasks": [
                 "T2"
             ]
         },
         {
-            "anchor": "spec/rounding.md#ceiling-to-currency",
+            "anchor": "tests/fixtures/spec/rounding.md#ceiling-to-currency",
             "coverage": "primary",
             "tasks": [
                 "T3"
