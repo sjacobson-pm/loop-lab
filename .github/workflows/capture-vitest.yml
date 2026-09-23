@@ -1,0 +1,70 @@
+name: capture-vitest
+
+# Scratch workflow. Captures the vitest JSON reporter's output so the
+# check-implement parser can be written and fixtured against a real results
+# file rather than against a guess at the schema.
+#
+# Produces two artifacts:
+#   vitest-green - the suite as committed, expected to pass
+#   vitest-red   - the same suite with one source file emptied, so the
+#                  parser gets the failure shape too, which differs from
+#                  the pass shape in ways that matter for the set comparison
+#
+# Delete this workflow once .loop/fixtures/results/ holds both files.
+
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    capture:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                node-version: 24
+                cache: npm
+
+            - name: Install
+              run: npm ci
+
+            - name: Capture Green
+              run: npm vitest run --reporter=json --outputFile=vitest-green.json
+              continue-on-error: true
+
+            - name: Show Green Shape
+              run: node .github/tools/show-results-shape.mjs vitest-green.json
+
+            - name: Upload Green
+              uses: actions/upload-artifact@v4
+              with:
+                name: vitest-green
+                path: vitest-green.json
+
+            # Break the suite deliberately to capture the failure shape.
+            # Emptying a source file mimics what the gate's red phase does when it reverts the implementer's source changes;
+            # such output is representative rather than merely "some failure".
+            - name: Break a Source File
+              run: |
+                TARGET="src/App.jsx"
+                echo "// emptied to capture the red shape" > "$TARGET"
+                git diff --stat
+
+            - name: Capture Red
+              run: npx vitest run --reporter=json --outputFile=vitest-red.json
+              continue-on-error: true
+
+            - name: Show Red Shape
+              run: node .github/tools/show-results-shape.mjs vitest-red.json
+
+            - name: Upload Red
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                name: vitest-red
+                path: vitest-red.json
+                if-no-files-found: warn
