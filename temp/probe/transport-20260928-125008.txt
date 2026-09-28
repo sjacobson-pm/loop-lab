@@ -1,0 +1,1 @@
+Temporary GitHub publication transport probe. No application or loop behavior changes.
