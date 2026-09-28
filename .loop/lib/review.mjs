@@ -128,11 +128,11 @@ export async function reviewTask({ task, index, evidence, delta, standards }, po
     result.outcome.toolRequests.some((request) => !request || !['view', 'glob', 'grep'].includes(request.name))
   )
     throw new Error('Reviewer attempted to write or returned incomplete read-only evidence.');
-  if (!Array.isArray(result.outcome.messages) || result.outcome.messages.length !== 1)
-    throw new Error('Reviewer must return one JSON findings array.');
+  if (!Array.isArray(result.outcome.messages) || result.outcome.messages.length === 0)
+    throw new Error('Reviewer must return a final JSON findings array.');
   let findings;
   try {
-    findings = JSON.parse(result.outcome.messages[0]);
+    findings = JSON.parse(result.outcome.messages.at(-1));
   } catch (error) {
     throw new Error(`Reviewer returned invalid JSON: ${error.message}`);
   }

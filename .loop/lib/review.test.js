@@ -174,6 +174,34 @@ describe('independent reviewer boundary', () => {
     expect(routeFindings(accepted)).toBe('test');
   });
 
+  it('validates the final JSON findings after read-only tool narration', async () => {
+    const messages = [
+      'Reading the harness input file .loop/task-context.json to gather anchors, file lists, and reports for review. Running a file read.',
+      'Reading source and test files to verify behavior against the anchored rule. Running parallel reads of src/a.js and src/a.test.js.',
+      '[]',
+    ];
+    const result = review({
+      sessionId: 'review-session',
+      exitCode: 0,
+      usage: {
+        counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 0 }],
+        apiDurationMs: 15767,
+        durationMs: 26125,
+      },
+      diagnostics: [],
+      toolRequests: [
+        { name: 'view', arguments: { path: '.loop/task-context.json' } },
+        { name: 'view', arguments: { path: 'src/a.js' } },
+        { name: 'view', arguments: { path: 'src/a.test.js' } },
+      ],
+      messages,
+    });
+    const accepted = await reviewTask(request(), { review: async () => result });
+    expect(accepted).toEqual([]);
+    expect(routeFindings(accepted)).toBe('done');
+    expect(result.outcome.messages).toEqual(messages);
+  });
+
   it.each([
     ['transport failure', { outcome: { ...review().outcome, status: 'failed' } }, /transport/i],
     ['missing audit', { violations: null }, /audit/i],
@@ -198,8 +226,18 @@ describe('independent reviewer boundary', () => {
     ['reported write', { outcome: { ...review().outcome, reportedWrites: ['src/a.js'] } }, /write/i],
     ['attempted write', { outcome: { ...review().outcome, toolRequests: [{ name: 'edit' }] } }, /write/i],
     ['invalid tool telemetry', { outcome: { ...review().outcome, toolRequests: [null] } }, /read-only/i],
-    ['multiple messages', { outcome: { ...review().outcome, messages: ['preface', '[]'] } }, /one JSON/i],
+    ['missing final message', { outcome: { ...review().outcome, messages: [] } }, /JSON findings array/i],
     ['invalid JSON', { outcome: { ...review().outcome, messages: ['not JSON'] } }, /invalid JSON/i],
+    [
+      'invalid final JSON after narration',
+      { outcome: { ...review().outcome, messages: ['Reading files.', 'not JSON'] } },
+      /invalid JSON/i,
+    ],
+    [
+      'invalid final findings after narration',
+      { outcome: { ...review().outcome, messages: ['Reading files.', '{}'] } },
+      /array/i,
+    ],
   ])('parks %s rather than calling it an empty review', async (_, overrides, reason) => {
     // * ARRANGE
     const ports = { review: async () => ({ ...review(), ...overrides }) };
