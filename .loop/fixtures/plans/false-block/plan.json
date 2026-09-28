@@ -1,8 +1,0 @@
-{
-    "story_id": "US-002",
-    "blocked": true,
-    "blocked_criteria": [
-        ".loop/fixtures/spec/rounding.md#ceiling-to-basic"
-    ],
-    "reason_code": "missing_anchor"
-}

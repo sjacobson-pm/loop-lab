@@ -60,6 +60,13 @@ export default defineConfig([
     },
   },
   {
+    files: ['.loop/**/*.mjs', '.loop/**/*.test.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      globals: globals.node,
+    },
+  },
+  {
     files: ['**/*.test.{js,jsx}', '**/__mocks__/*.{js,jsx}'],
     extends: [
       vitest.configs.recommended,

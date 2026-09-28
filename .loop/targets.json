@@ -3,9 +3,24 @@
   "targets": {
     "react-vitest": {
       "exercised": true,
+      "publication_base": "main",
+      "budgets": { "cycle": 3, "total": 15 },
       "install": ["npm", "ci"],
+      "build": null,
+      "red_policy": {
+        "require_named_assertion_failure": true,
+        "allow_unrelated_failures": false
+      },
       "test": ["npx", "vitest", "run", "--reporter=json", "--outputFile={{results}}"],
       "results_format": "vitest-json",
+      "stack": "react-vitest",
+      "review_standards": {
+        "organization": [],
+        "local": [],
+        "repository": [".github/copilot-instructions.md", "CONTRIBUTING.md"],
+        "guidelines": [],
+        "required": []
+      },
       "test_pathspecs": [
         "*.test.js",
         "*.test.jsx",
@@ -17,13 +32,20 @@
     },
     "dotnet-xunit": {
       "exercised": false,
+      "budgets": { "cycle": 3, "total": 15 },
       "note": "Declared so US-001 and US-002 resolve. No trx parser exists; a run against this profile will fail at results_format, not silently pass.",
       "install": ["dotnet", "restore"],
       "test": ["dotnet", "test", "--logger", "trx;LogFileName={{results}}"],
       "results_format": "trx",
-      "test_pathspecs": [
-        "tests/**"
-      ]
+      "stack": "dotnet-xunit",
+      "review_standards": {
+        "organization": [],
+        "local": ["pa-review-dotnet", "pa-review-dotnet-security"],
+        "repository": [".github/copilot-instructions.md", "CONTRIBUTING.md"],
+        "guidelines": ["github-process-docs"],
+        "required": []
+      },
+      "test_pathspecs": ["tests/**"]
     }
   }
 }

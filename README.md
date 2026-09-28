@@ -1,5 +1,7 @@
 # FakeAPI Web Front-End (Vite + React 19)
 
+[Attended agentic development loop](.loop/README.md)
+
 <div align="center">
 
 React web front-end for FakeAPI.

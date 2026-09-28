@@ -63,10 +63,30 @@ export default defineConfig(({ command, mode }) => {
       environment: 'jsdom',
       setupFiles: ['./vitest-setup.js'],
       include: ['**/*.test.{js,jsx}'],
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: 'app',
+            include: ['src/**/*.test.{js,jsx}'],
+            exclude: ['**/node_modules/**', '.loop/**'],
+            sequence: { groupOrder: 0 },
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: 'loop',
+            include: ['.loop/**/*.test.js'],
+            exclude: ['**/node_modules/**', 'src/**'],
+            sequence: { groupOrder: 1 },
+          },
+        },
+      ],
       coverage: {
         provider: 'v8',
-        include: ['src/**/*.{js,jsx}'],
-        exclude: ['**/__mocks__/*.*', 'src/__testing__/**/*.*'],
+        include: ['src/**/*.{js,jsx}', '.loop/**/*.mjs'],
+        exclude: ['**/__mocks__/*.*', 'src/__testing__/**/*.*', '.loop/vitest.config.mjs'],
         clean: true,
         cleanOnRerun: true,
         reportsDirectory: './coverage',

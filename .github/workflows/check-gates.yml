@@ -1,30 +1,24 @@
 name: check-gates
 
-# Guards the conductor's decision logic. Runs the committed baselines against
-# loop-decide.mjs on every change to the loop's brain or its fixtures.
-#
-# Deliberately plain Actions: this gate must not be reachable by any agent.
+# Runs the deterministic loop harness tests without dispatching an agent.
 
 on:
   pull_request:
     paths:
-      - ".github/tools/loop-decide.mjs"
-      - ".github/tools/check-gates.mjs"
-      - ".loop/legs.json"
-      - ".loop/fixtures/**"
-      - ".github/workflows/check-gates.yml"
+      - '.loop/**'
+      - '.github/workflows/check-gates.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
   push:
     branches:
       - main
     paths:
-      - ".github/tools/loop-decide.mjs"
-      - ".github/tools/check-gates.mjs"
-      - ".github/tools/check-plan.mjs"
-      - ".github/tools/check-plan-cases.mjs"
-      - ".loop/legs.json"
-      - "spec/**"
-      - "stories/**"
-      - ".loop/fixtures/**"
+      - '.loop/**'
+      - '.github/workflows/check-gates.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
   workflow_dispatch:
 
 permissions:
@@ -34,20 +28,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: '22.x'
 
-      - name: Run loop regression suite
-        shell: bash
+      - name: Setup .npmrc
         run: |
-          set -o pipefail
-          node .github/tools/check-gates.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "@awesome.me:registry=https://npm.fontawesome.com/"                           >> .npmrc
+          echo "@fortawesome:registry=https://npm.fontawesome.com/"                          >> .npmrc
+          echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONT_AWESOME_PKG_MGR_TOKEN }}" >> .npmrc
 
-      - name: Run plan conformance suite
-        shell: bash
-        run: |
-          set -o pipefail
-          node .github/tools/check-plan-cases.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Install dependencies
+        run: npm ci && npm --prefix .loop ci --registry=https://registry.npmjs.org/
+
+      - name: Run deterministic loop regression suite
+        run: npm --prefix .loop run test:coverage
