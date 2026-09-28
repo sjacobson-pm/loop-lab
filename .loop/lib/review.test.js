@@ -1,4 +1,5 @@
 // @vitest-environment node
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { resolveStandards, reviewTask, routeFindings, validateFindings } from './review.mjs';
 
@@ -21,6 +22,15 @@ const approval = {
   records: [],
   missingRequired: [],
 };
+const reviewerWorktree = path.resolve('review-standards-root');
+const repositoryStandards = {
+  ...approval,
+  references: [
+    { kind: 'repository', id: '.github/copilot-instructions.md' },
+    { kind: 'repository', id: 'CONTRIBUTING.md' },
+  ],
+};
+const viewed = (file) => ({ name: 'view', arguments: { path: file } });
 const review = (overrides = {}) => ({
   outcome: {
     status: 'completed',
@@ -38,6 +48,7 @@ const request = () => ({
   delta: { changes: [], bytes: Buffer.alloc(0) },
   standards: approval,
 });
+const repositoryRequest = () => ({ ...request(), standards: repositoryStandards, worktree: reviewerWorktree });
 
 describe('review findings and routing', () => {
   it.each([
@@ -155,6 +166,117 @@ describe('standards resolution', () => {
 });
 
 describe('independent reviewer boundary', () => {
+  it('accepts findings after opening every resolved repository standard in the review worktree', async () => {
+    const outcome = review({
+      toolRequests: [
+        viewed(path.join(reviewerWorktree, '.github', 'copilot-instructions.md')),
+        viewed(path.join(reviewerWorktree, 'CONTRIBUTING.md')),
+      ],
+    });
+    expect(await reviewTask(repositoryRequest(), { review: async () => outcome })).toEqual([]);
+  });
+
+  it('matches relative standard reads and Windows case and separator variants to exact resolved paths', async () => {
+    const contributing = path.join(reviewerWorktree, 'CONTRIBUTING.md');
+    const alias = process.platform === 'win32' ? contributing.replaceAll('\\', '/').toUpperCase() : contributing;
+    const outcome = review({
+      toolRequests: [viewed('.github/copilot-instructions.md'), viewed(alias)],
+    });
+    expect(await reviewTask(repositoryRequest(), { review: async () => outcome })).toEqual([]);
+  });
+
+  it('requires exact standard path case on non-Windows platforms', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { ...descriptor, value: 'linux' });
+    try {
+      const outcome = review({
+        toolRequests: [
+          viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+          viewed(path.join(reviewerWorktree, 'contributing.md')),
+        ],
+      });
+      await expect(reviewTask(repositoryRequest(), { review: async () => outcome })).rejects.toThrow(
+        /incomplete review evidence.*CONTRIBUTING\.md/i
+      );
+    } finally {
+      Object.defineProperty(process, 'platform', descriptor);
+    }
+  });
+
+  it('rejects a reviewer that opened no resolved repository standards', async () => {
+    await expect(
+      reviewTask(repositoryRequest(), {
+        review: async () => review({ toolRequests: [viewed(path.join(reviewerWorktree, 'src/a.js'))] }),
+      })
+    ).rejects.toThrow(/incomplete review evidence.*copilot-instructions\.md.*CONTRIBUTING\.md/i);
+  });
+
+  it.each([
+    ['only the first standard', [viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md'))]],
+    [
+      'the first standard plus a similarly named unrelated file',
+      [
+        viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+        viewed(path.join(reviewerWorktree, 'nested/CONTRIBUTING.md')),
+      ],
+    ],
+    [
+      'the first standard plus a grep of the other',
+      [
+        viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+        { name: 'grep', arguments: { path: path.join(reviewerWorktree, 'CONTRIBUTING.md') } },
+      ],
+    ],
+    [
+      'the first standard plus a path outside the review worktree',
+      [
+        viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+        viewed(path.resolve(reviewerWorktree, '..', 'CONTRIBUTING.md')),
+      ],
+    ],
+    [
+      'the first standard plus a view without path arguments',
+      [viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')), { name: 'view', arguments: {} }],
+    ],
+    [
+      'the first standard plus a non-string view path',
+      [
+        viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+        { name: 'view', arguments: { path: 42 } },
+      ],
+    ],
+  ])('rejects incomplete repository-standard reads: %s', async (_, toolRequests) => {
+    await expect(reviewTask(repositoryRequest(), { review: async () => review({ toolRequests }) })).rejects.toThrow(
+      /incomplete review evidence.*CONTRIBUTING\.md/i
+    );
+  });
+
+  it('does not demand checkout reads for resolved non-repository kinds or unresolved repository standards', async () => {
+    const standards = {
+      ...approval,
+      references: [
+        { kind: 'organization', id: 'org-standard' },
+        { kind: 'local', id: 'local-skill' },
+        { kind: 'guidelines', id: 'external-guidance' },
+      ],
+      records: [
+        { kind: 'repository', id: 'optional.md', status: 'missing' },
+        { kind: 'repository', id: 'incompatible.md', status: 'incompatible' },
+      ],
+    };
+    expect(await reviewTask({ ...request(), standards }, { review: async () => review() })).toEqual([]);
+  });
+
+  it('still accepts a clean review when no repository standards are resolved', async () => {
+    expect(await reviewTask(request(), { review: async () => review() })).toEqual([]);
+  });
+
+  it('fails closed when a resolved repository standard has no review worktree root', async () => {
+    await expect(
+      reviewTask({ ...repositoryRequest(), worktree: undefined }, { review: async () => review() })
+    ).rejects.toThrow(/review worktree/i);
+  });
+
   it('rejects missing standards resolution before dispatching a reviewer', async () => {
     const ports = { review: vi.fn(async () => review()) };
     await expect(reviewTask({ ...request(), standards: null }, ports)).rejects.toThrow(/standards resolution/i);

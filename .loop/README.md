@@ -189,6 +189,9 @@ fresh disposable worktree replaying the audited task delta. The reviewer
 inspects anchored criteria, bindings, RED/GREEN reports, source/test changes and
 resolved standards; it cannot edit or override a harness verdict. Its physical
 write audit and transport evidence must be clean before findings are accepted.
+The harness requires exact recorded `view` requests for every resolved repository
+standard file; missing reads park the task. This proves files were opened, not
+that the reviewer applied their guidance.
 Configured optional standards missing from the actual repository or the
 caller's explicitly supplied skill-availability catalog are recorded as missing.
 Missing required standards park the task. The React target excludes .NET-only

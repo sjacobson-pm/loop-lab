@@ -97,7 +97,17 @@ function adapters() {
     if (leg === 'review') {
       expect(await readFile(path.join(worktree, `src/${task.id}.js`), 'utf8')).toBe('one');
       expect(await readFile(path.join(worktree, `src/${task.id}.test.js`), 'utf8')).toContain('rule');
-      return { status: 'completed', reportedWrites: [], toolRequests: [], messages: ['[]'] };
+      const { standards } = JSON.parse(await readFile(path.join(worktree, '.loop/task-context.json'), 'utf8'));
+      const toolRequests = await Promise.all(
+        standards.references
+          .filter(({ kind }) => kind === 'repository')
+          .map(async ({ id }) => {
+            const file = path.join(worktree, id);
+            await readFile(file, 'utf8');
+            return { name: 'view', arguments: { path: file } };
+          })
+      );
+      return { status: 'completed', reportedWrites: [], toolRequests, messages: ['[]'] };
     }
     const file = `src/${task.id}.${leg === 'test' ? 'test.js' : 'js'}`;
     const binding = { id: `${file}::rule ${task.id}`, file, name: `rule ${task.id}`, criteria: task.criteria };

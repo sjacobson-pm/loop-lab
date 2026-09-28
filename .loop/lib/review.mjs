@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { validateRelativePath } from './plan.mjs';
 
 const domains = Object.freeze({
@@ -107,7 +108,7 @@ export function resolveStandards({ stack, configured, available }) {
 }
 
 /** One independent read-only judgment, validated before any harness route is selected. */
-export async function reviewTask({ task, index, evidence, delta, standards }, ports) {
+export async function reviewTask({ task, index, evidence, delta, standards, worktree }, ports) {
   if (!standards || !Array.isArray(standards.references) || !Array.isArray(standards.missingRequired))
     throw new Error('Missing standards resolution.');
   if (standards.missingRequired.length)
@@ -128,6 +129,25 @@ export async function reviewTask({ task, index, evidence, delta, standards }, po
     result.outcome.toolRequests.some((request) => !request || !['view', 'glob', 'grep'].includes(request.name))
   )
     throw new Error('Reviewer attempted to write or returned incomplete read-only evidence.');
+  const repository = standards.references.filter(({ kind }) => kind === 'repository');
+  if (repository.length) {
+    if (typeof worktree !== 'string' || !path.isAbsolute(worktree))
+      throw new Error('Review worktree is required to verify repository standard reads.');
+    const identity = (file) => {
+      const absolute = path.resolve(worktree, file);
+      return process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+    };
+    const reads = new Set(
+      result.outcome.toolRequests
+        .filter((request) => request.name === 'view' && typeof request.arguments?.path === 'string')
+        .map((request) => identity(request.arguments.path))
+    );
+    const missing = repository.filter(({ id }) => !reads.has(identity(id)));
+    if (missing.length)
+      throw new Error(
+        `Incomplete review evidence: resolved repository standards not opened: ${missing.map(({ id }) => id).join(', ')}.`
+      );
+  }
   if (!Array.isArray(result.outcome.messages) || result.outcome.messages.length === 0)
     throw new Error('Reviewer must return a final JSON findings array.');
   let findings;

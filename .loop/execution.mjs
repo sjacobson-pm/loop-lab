@@ -286,7 +286,7 @@ export async function createExecution({
             protectedFiles: [contextPath, index.spec_path],
           });
           return reviewTask(
-            { task, index, evidence, delta, standards },
+            { task, index, evidence, delta, standards, worktree: reviewTree.path },
             { review: async () => ({ outcome, violations }) }
           );
         });
