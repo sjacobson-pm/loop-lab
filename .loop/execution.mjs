@@ -228,7 +228,7 @@ export async function createExecution({
           return (await checked(replayTree, phase)).report;
         });
       };
-      const review = async ({ evidence, delta, reportUsage }) =>
+      const review = async ({ evidence, delta, feedback, reportUsage }) =>
         scoped(base.tree.path, async (reviewTree) => {
           await applyPatch(reviewTree.path, delta);
           const configured = target.review_standards;
@@ -264,7 +264,7 @@ export async function createExecution({
             outcome = await agent({
               worktree: reviewTree.path,
               leg: 'review',
-              prompt: `${template}\n\nRead harness input from ${contextPath}.`,
+              prompt: `${template}\n\nRead harness input from ${contextPath}.${feedback ? `\n\nReview retry feedback: ${feedback}` : ''}`,
               deniedPaths: [path.join(reviewTree.path, '.git')],
               profile: profiles.review ?? {},
               signal,

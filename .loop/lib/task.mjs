@@ -1,5 +1,5 @@
 import { judgeGreen, judgeRed, judgeSuite } from './results.mjs';
-import { routeFindings, validateFindings } from './review.mjs';
+import { MissingReviewReadsError, routeFindings, validateFindings } from './review.mjs';
 import { beginExecution, mergeUsage, nextRepair, resolveLimits } from './termination.mjs';
 
 /** Test authors identify tests and anchors; they cannot return a verdict or claim source ownership. */
@@ -181,27 +181,36 @@ export async function runTask({ task, target, baseline, index, standards, maxRep
         throw new Error('Missing captured delta evidence.');
       phase = 'review';
       if (typeof ports.review !== 'function') throw new Error('Independent review is required.');
-      const reviewBlocked = budget(beginExecution(evidence.termination, limits));
-      if (reviewBlocked) return reviewBlocked;
-      let reported = false;
       let rawFindings;
-      try {
-        rawFindings = await ports.review({
-          task,
-          target,
-          baseline,
-          index,
-          standards,
-          evidence,
-          delta,
-          reportUsage: (usage) => {
-            if (reported) throw new Error('Reviewer usage was reported twice.');
-            reportUsage(usage);
-            reported = true;
-          },
-        });
-      } finally {
-        if (!reported) reportUsage(null);
+      let retryFeedback;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const reviewBlocked = budget(beginExecution(evidence.termination, limits));
+        if (reviewBlocked) return reviewBlocked;
+        let reported = false;
+        try {
+          rawFindings = await ports.review({
+            task,
+            target,
+            baseline,
+            index,
+            standards,
+            evidence,
+            delta,
+            feedback: retryFeedback,
+            reportUsage: (usage) => {
+              if (reported) throw new Error('Reviewer usage was reported twice.');
+              reportUsage(usage);
+              reported = true;
+            },
+          });
+          break;
+        } catch (error) {
+          if (!(error instanceof MissingReviewReadsError) || attempt !== 0) throw error;
+          evidence.diagnostics.push({ phase: 'review', message: error.message });
+          retryFeedback = `Open these exact files with view before returning findings: ${error.files.join(', ')}.`;
+        } finally {
+          if (!reported) reportUsage(null);
+        }
       }
       const findings = validateFindings(rawFindings, task, index);
       const route = routeFindings(findings);

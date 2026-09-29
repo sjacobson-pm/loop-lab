@@ -14,6 +14,13 @@ const domains = Object.freeze({
 const categories = ['organization', 'local', 'repository', 'guidelines'];
 const nonempty = (value) => typeof value === 'string' && value.trim().length > 0;
 
+export class MissingReviewReadsError extends Error {
+  constructor(files, message) {
+    super(message);
+    this.files = Object.freeze([...files]);
+  }
+}
+
 /** The model reports faults; only this contract can turn them into routing input. */
 export function validateFindings(findings, task, index) {
   if (!Array.isArray(findings)) throw new Error('Review findings must be an array.');
@@ -142,13 +149,18 @@ export async function reviewTask({ task, index, evidence, delta, standards, work
       .filter((request) => request.name === 'view' && typeof request.arguments?.path === 'string')
       .map((request) => identity(request.arguments.path))
   );
-  const missing = repository.filter(({ id }) => !reads.has(identity(id)));
-  if (missing.length)
-    throw new Error(
-      `Incomplete review evidence: resolved repository standards not opened: ${missing.map(({ id }) => id).join(', ')}.`
+  const missing = repository.filter(({ id }) => !reads.has(identity(id))).map(({ id }) => id);
+  const missingSpec = !reads.has(identity(index.spec_path));
+  if (missing.length || missingSpec) {
+    const reasons = [
+      ...(missing.length ? [`resolved repository standards not opened: ${missing.join(', ')}`] : []),
+      ...(missingSpec ? [`cited spec not opened: ${index.spec_path}`] : []),
+    ];
+    throw new MissingReviewReadsError(
+      [...missing, ...(missingSpec ? [index.spec_path] : [])],
+      `Incomplete review evidence: ${reasons.join('; ')}.`
     );
-  if (!reads.has(identity(index.spec_path)))
-    throw new Error(`Incomplete review evidence: cited spec not opened: ${index.spec_path}.`);
+  }
   if (!Array.isArray(result.outcome.messages) || result.outcome.messages.length === 0)
     throw new Error('Reviewer must return a final JSON findings array.');
   let findings;

@@ -190,9 +190,11 @@ inspects anchored criteria, bindings, RED/GREEN reports, source/test changes and
 resolved standards; it cannot edit or override a harness verdict. Its physical
 write audit and transport evidence must be clean before findings are accepted.
 The harness requires exact recorded `view` requests for the cited spec file
-and every resolved repository standard file; missing reads park the task.
-Recorded reads prove the reviewer opened the spec and standards, not that it
-applied them.
+and every resolved repository standard file. Missing reads get one fresh,
+budgeted reviewer retry with feedback naming the unopened files; a second
+incomplete read parks the task. Other review failures park immediately.
+The retry improves compliance odds; recorded reads prove the reviewer opened
+the spec and standards, not that it applied them.
 Configured optional standards missing from the actual repository or the
 caller's explicitly supplied skill-availability catalog are recorded as missing.
 Missing required standards park the task. The React target excludes .NET-only

@@ -1,5 +1,7 @@
 // @vitest-environment node
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { reviewTask } from './review.mjs';
 import { runTask, validateBindings } from './task.mjs';
 
 const task = {
@@ -70,8 +72,132 @@ const request = () => ({
   baseline: 'baseline-token',
   index: { criteria: [{ anchor: task.criteria[0] }] },
 });
+const reviewIndex = { ...request().index, spec_path: 'spec/x.html' };
+const reviewStandards = {
+  references: [
+    { kind: 'repository', id: '.github/copilot-instructions.md' },
+    { kind: 'repository', id: 'CONTRIBUTING.md' },
+  ],
+  records: [],
+  missingRequired: [],
+};
+const specRead = { name: 'view', arguments: { path: 'spec/x.html' } };
+const standardsReads = reviewStandards.references.map(({ id }) => ({ name: 'view', arguments: { path: id } }));
+const reviewerResponse = (toolRequests, overrides = {}) => ({
+  outcome: {
+    status: 'completed',
+    reportedWrites: [],
+    toolRequests,
+    messages: ['[]'],
+    usage: {
+      counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 0.25 }],
+      apiDurationMs: 10,
+      durationMs: 20,
+    },
+    ...overrides,
+  },
+  violations: [],
+});
+function realReview(ports, responses) {
+  const feedback = [];
+  ports.review.mockImplementation(async (input) => {
+    feedback.push(input.feedback);
+    const response = responses.shift();
+    if (!response) throw new Error('Unexpected reviewer invocation.');
+    input.reportUsage(response.outcome.usage);
+    return reviewTask(
+      {
+        task: input.task,
+        index: input.index,
+        evidence: input.evidence,
+        delta: input.delta,
+        standards: reviewStandards,
+        worktree: path.resolve('reviewer'),
+      },
+      { review: async () => response }
+    );
+  });
+  return feedback;
+}
 
 describe('task RED/GREEN sequence', () => {
+  it('retries missing spec and standards reads once with exact filenames and accepts a complete review', async () => {
+    const { ports } = fixture();
+    const feedback = realReview(ports, [
+      reviewerResponse([]),
+      reviewerResponse([specRead, ...standardsReads], {
+        usage: {
+          counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 0.75 }],
+          apiDurationMs: 11,
+          durationMs: 21,
+        },
+      }),
+    ]);
+    const result = await runTask({ ...request(), index: reviewIndex, maxRepairs: 0 }, ports);
+    expect(result.status).toBe('ready');
+    expect(result.evidence.reviews).toEqual([{ findings: [], route: 'done' }]);
+    expect(ports.review).toHaveBeenCalledTimes(2);
+    expect(feedback[0]).toBeUndefined();
+    expect(feedback[1]).toContain('spec/x.html');
+    expect(feedback[1]).toContain('.github/copilot-instructions.md');
+    expect(feedback[1]).toContain('CONTRIBUTING.md');
+    expect(feedback[1]).not.toMatch(/clamp|rule-a|rule text/i);
+    expect(result.evidence.termination.total).toBe(4);
+    expect(result.evidence.usage.counters).toEqual([{ name: 'premiumRequests', unit: 'premium-requests', value: 1 }]);
+  });
+
+  it('parks after a second incomplete read with both attempts and measured usage reported', async () => {
+    const { ports } = fixture();
+    const feedback = realReview(ports, [reviewerResponse([]), reviewerResponse(standardsReads)]);
+    const result = await runTask({ ...request(), index: reviewIndex, maxRepairs: 0 }, ports);
+    expect(result.status).toBe('parked');
+    expect(ports.review).toHaveBeenCalledTimes(2);
+    expect(feedback[1]).toContain('spec/x.html');
+    expect(result.evidence.diagnostics).toEqual([
+      expect.objectContaining({ phase: 'review', message: expect.stringContaining('CONTRIBUTING.md') }),
+      expect.objectContaining({ phase: 'review', message: expect.stringContaining('spec/x.html') }),
+    ]);
+    expect(result.evidence.diagnostics[1].message).not.toContain('CONTRIBUTING.md');
+    expect(result.evidence.termination.total).toBe(4);
+    expect(result.evidence.usage.counters).toEqual([{ name: 'premiumRequests', unit: 'premium-requests', value: 0.5 }]);
+    expect(result.evidence.reviews).toEqual([]);
+  });
+
+  it('does not dispatch a missing-read retry when the existing total execution cap is exhausted', async () => {
+    const { ports } = fixture();
+    realReview(ports, [reviewerResponse([]), reviewerResponse([specRead, ...standardsReads])]);
+    const result = await runTask({ ...request(), index: reviewIndex, maxAgentExecutions: 3 }, ports);
+    expect(result.status).toBe('parked');
+    expect(ports.review).toHaveBeenCalledTimes(1);
+    expect(result.evidence.termination.total).toBe(3);
+    expect(result.evidence.diagnostics.at(-1).message).toMatch(/total limit/i);
+    expect(result.evidence.usage.counters).toEqual([
+      { name: 'premiumRequests', unit: 'premium-requests', value: 0.25 },
+    ]);
+  });
+
+  it.each([
+    ['write audit', { violations: [{ code: 'review_write', path: 'src/a.js' }] }, /audit/i],
+    ['non-read-only tool', { outcome: { toolRequests: [{ name: 'edit', arguments: {} }] } }, /read-only/i],
+    ['transport failure', { outcome: { status: 'failed' } }, /transport/i],
+    ['malformed final JSON', { outcome: { messages: ['not JSON'] } }, /invalid JSON/i, true],
+    ['invalid findings schema', { outcome: { messages: ['{}'] } }, /array/i, true],
+  ])('does not retry %s after reaching its validation boundary', async (_, change, reason, readAll) => {
+    const { ports } = fixture();
+    const incomplete = reviewerResponse(readAll ? [specRead, ...standardsReads] : []);
+    const first = {
+      ...incomplete,
+      ...change,
+      outcome: { ...incomplete.outcome, ...change.outcome },
+    };
+    realReview(ports, [first, reviewerResponse([specRead, ...standardsReads])]);
+    const result = await runTask({ ...request(), index: reviewIndex }, ports);
+    expect(result.status).toBe('parked');
+    expect(result.evidence.diagnostics.at(-1).message).toMatch(reason);
+    expect(ports.review).toHaveBeenCalledTimes(1);
+    expect(result.evidence.termination.total).toBe(3);
+  });
+
   it('parks incomplete audit evidence without inventing an implementation finding', async () => {
     // * ARRANGE
     const { ports } = fixture();

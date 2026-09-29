@@ -469,6 +469,47 @@ describe('isolated task execution adapters', { timeout: 30_000 }, () => {
     expect(result.evidence.reviewStandards.references).toEqual([{ kind: 'repository', id: 'REVIEW.md' }]);
     expect(normal.calls.some(({ leg }) => leg === 'review')).toBe(true);
   });
+  it('retries an incomplete reviewer read in a fresh worktree with exact-file feedback in its prompt', async () => {
+    const root = await repository();
+    await writeFile(path.join(root, 'REVIEW.md'), 'Project-specific review guidance.\n');
+    const normal = adapters();
+    const reviews = [];
+    const execution = await createExecution({
+      root,
+      target: {
+        ...target,
+        review_standards: { ...target.review_standards, repository: ['REVIEW.md'] },
+      },
+      index,
+      runner: normal.runner,
+      agent: async (input) => {
+        if (input.leg !== 'review') return normal.agent(input);
+        reviews.push({ worktree: input.worktree, prompt: input.prompt });
+        if (reviews.length === 1) {
+          const specFile = path.join(input.worktree, index.spec_path);
+          await readFile(specFile, 'utf8');
+          return {
+            status: 'completed',
+            reportedWrites: [],
+            toolRequests: [{ name: 'view', arguments: { path: specFile } }],
+            messages: ['[]'],
+            usage: { counters: [] },
+          };
+        }
+        return normal.agent(input);
+      },
+    });
+    executions.push(execution);
+    const result = await execution.runTask(tasks[0], { maxRepairs: 0 });
+    expect(result.status).toBe('ready');
+    expect(reviews).toHaveLength(2);
+    expect(reviews[1].worktree).not.toBe(reviews[0].worktree);
+    expect(reviews[1].prompt).toContain('REVIEW.md');
+    expect(reviews[1].prompt).not.toContain('Project-specific review guidance.');
+    expect(result.evidence.reviews).toEqual([{ findings: [], route: 'done' }]);
+    expect(result.evidence.termination.total).toBe(4);
+  }, 60_000);
+
   it('retains review transport failure together with the incomplete write audit', async () => {
     const normal = adapters();
     const { execution } = await setup({
