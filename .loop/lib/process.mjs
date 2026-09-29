@@ -3,6 +3,8 @@ import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { promisify } from 'node:util';
 
+export const MAX_COMMAND_TIMEOUT_MS = 2_147_483_647;
+
 async function terminateTree(child) {
   if (process.platform === 'win32')
     await promisify(execFile)('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true });
@@ -27,6 +29,7 @@ export async function executeCommand(
     !path.isAbsolute(cwd) ||
     !Number.isSafeInteger(timeoutMs) ||
     timeoutMs <= 0 ||
+    timeoutMs > MAX_COMMAND_TIMEOUT_MS ||
     !Number.isSafeInteger(maxOutputBytes) ||
     maxOutputBytes <= 0
   )

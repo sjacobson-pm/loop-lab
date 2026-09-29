@@ -2,7 +2,7 @@ import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { executeCommand } from './process.mjs';
+import { executeCommand, MAX_COMMAND_TIMEOUT_MS } from './process.mjs';
 import { parseVitestResults } from './vitest-results.mjs';
 
 const isArgv = (value) =>
@@ -17,9 +17,12 @@ const invalid = (kind, message, exitCode = null) => ({
 });
 
 /** Install only at the baseline boundary; every test run gets fresh, single-use report files. */
-export async function runTarget({ target, cwd, phase, timeoutMs, signal }, processPort = executeCommand) {
+export async function runTarget({ target, cwd, phase, signal }, processPort = executeCommand) {
   if (
     target?.exercised !== true ||
+    !Number.isSafeInteger(target.command_timeout_ms) ||
+    target.command_timeout_ms <= 0 ||
+    target.command_timeout_ms > MAX_COMMAND_TIMEOUT_MS ||
     target.results_format !== 'vitest-json' ||
     !['baseline', 'red', 'green', 'integration'].includes(phase) ||
     !isArgv(target.install) ||
@@ -43,7 +46,7 @@ export async function runTarget({ target, cwd, phase, timeoutMs, signal }, proce
     const report = path.join(directory, 'results.json');
     const command = async (argv, kind) => {
       stage = kind;
-      commandResult = await processPort(argv, { cwd: root, timeoutMs, signal });
+      commandResult = await processPort(argv, { cwd: root, timeoutMs: target.command_timeout_ms, signal });
       if (!Array.isArray(commandResult?.errors)) throw new Error('Command returned incomplete process evidence.');
       if (
         commandResult.errors.length ||

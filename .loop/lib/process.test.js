@@ -263,4 +263,11 @@ describe('trusted argv execution', () => {
       await expect(executeCommand(['node'], { ...options(), ...change })).rejects.toThrow(/command/i);
     }
   );
+  it('rejects a timeout above the Node timer limit before spawning a subprocess', async () => {
+    const spawn = vi.fn();
+    await expect(executeCommand(['node'], { ...options(), timeoutMs: 2_147_483_648 }, { spawn })).rejects.toThrow(
+      /command directory or limits/i
+    );
+    expect(spawn).not.toHaveBeenCalled();
+  });
 });

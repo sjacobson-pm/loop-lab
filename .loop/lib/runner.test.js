@@ -30,6 +30,7 @@ afterEach(async () => {
 });
 const target = () => ({
   exercised: true,
+  command_timeout_ms: 900_000,
   install: ['node', '-e', 'process.exit(0)'],
   build: null,
   test: [
@@ -93,6 +94,7 @@ describe('trusted target runner', { timeout: 30_000 }, () => {
     // * ASSERT
     expect(profiles['react-vitest']).toMatchObject({
       exercised: true,
+      command_timeout_ms: 900_000,
       install: ['npm', 'ci'],
       build: null,
       results_format: 'vitest-json',
@@ -154,6 +156,14 @@ describe('trusted target runner', { timeout: 30_000 }, () => {
     { red_policy: { require_named_assertion_failure: true, allow_unrelated_failures: true } },
     { install: [] },
     { build: 'npm run build' },
+    { command_timeout_ms: undefined },
+    { command_timeout_ms: null },
+    { command_timeout_ms: 0 },
+    { command_timeout_ms: -1 },
+    { command_timeout_ms: 1.5 },
+    { command_timeout_ms: '900000' },
+    { command_timeout_ms: Number.NaN },
+    { command_timeout_ms: 2_147_483_648 },
   ])('rejects unsupported or ambiguous target configuration %j', async (change) => {
     // * ARRANGE
     const processPort = vi.fn();
@@ -166,6 +176,26 @@ describe('trusted target runner', { timeout: 30_000 }, () => {
     expect(run.complete).toBe(false);
     expect(run.errors[0].kind).toBe('configuration');
     expect(processPort).not.toHaveBeenCalled();
+  });
+  it('passes the target timeout to install, build, and test without using the five-minute default', async () => {
+    const root = await fixture();
+    const calls = [];
+    const configured = { ...target(), build: ['node', '-e', 'process.exit(0)'] };
+    const processPort = async (argv, options) => {
+      calls.push({ argv, timeoutMs: options.timeoutMs });
+      return { exitCode: 0, errors: [], stderr: '' };
+    };
+    const baseline = await runTarget({ target: configured, cwd: root, phase: 'baseline' }, processPort);
+    expect(baseline.errors[0].kind).toBe('report');
+    expect(calls.map(({ timeoutMs }) => timeoutMs)).toEqual([900_000, 900_000, 900_000]);
+    expect(calls[0].argv).toEqual(configured.install);
+    expect(calls[1].argv).toEqual(configured.build);
+    expect(calls[2].argv.slice(0, -1)).toEqual(
+      configured.test.map((part) => (part.includes('{{results}}') ? expect.stringMatching(/results\.json$/) : part))
+    );
+    calls.length = 0;
+    await runTarget({ target: configured, cwd: root, phase: 'green' }, processPort);
+    expect(calls.map(({ timeoutMs }) => timeoutMs)).toEqual([900_000, 900_000]);
   });
   it('runs install/build only as requested and never mistakes installation failure for RED', async () => {
     // * ARRANGE

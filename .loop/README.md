@@ -164,6 +164,13 @@ output (8 MiB of raw bytes by default), and a five-minute default deadline.
 On Windows, npm/npx run through the npm CLI bundled beside the selected Node
 executable, not a `.cmd` shell fallback; that layout was verified on this host.
 Other Windows npm layouts require an explicit adapter change if that CLI is absent.
+
+The exercised React target requires `command_timeout_ms: 900000` (15 minutes)
+for each supervised install, build, and test command. Missing, non-integer,
+nonpositive, or out-of-range target timeouts reject the run before command
+dispatch. `executeCommand` retains a five-minute default for direct callers;
+the target runner always supplies its validated timeout.
+
 Cancellation awaits exact-PID process-tree termination and stdio closure.
 POSIX commands use supervised process groups without `unref`; their group
 termination is unit-tested here, not claimed as a live Linux verification.

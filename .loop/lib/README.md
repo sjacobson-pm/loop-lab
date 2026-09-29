@@ -51,6 +51,9 @@ See the [attended runner](../README.md) for the real host boundary and limitatio
   overrides for callers. Task-local signature history detects repeated findings
   before a per-route repair or total agent-execution cap is exhausted.
   Authors never certify verdicts; missing audit/snapshot/delta evidence parks work.
+- `runTarget({ target, cwd, phase }, processPort)` requires a positive,
+  Node-timer-range `command_timeout_ms` in the exercised target and applies it
+  to every supervised install, build, and test invocation.
 - `capturePatch(before, after, files)` uses raw blobs and temporary Git indexes
   to preserve bytes, additions, deletions and rename endpoints without commits.
   `applyPatch(candidate, patch)` preflights hashes and payload paths, checks Git
