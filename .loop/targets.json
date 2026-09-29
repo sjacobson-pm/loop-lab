@@ -3,7 +3,7 @@
   "targets": {
     "react-vitest": {
       "exercised": true,
-      "publication_base": "main",
+      "publication_base": "loop/acceptance-base-20260929",
       "budgets": { "cycle": 3, "total": 15 },
       "install": ["npm", "ci"],
       "build": null,

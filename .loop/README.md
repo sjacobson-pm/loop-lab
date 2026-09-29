@@ -76,7 +76,7 @@ config also canonicalizes its root. No coverage thresholds are relaxed.
 Run from the repository worktree in an attended terminal:
 
 ```powershell
-node .loop\run.mjs owner/repo 42 spec/example.html Rule
+node .loop\run.mjs owner/repo 42 spec/example.html Rule --model gpt-5-mini --reasoning-effort low
 ```
 
 Help and invalid-usage paths do not import the execution graph or `jsdom`.
@@ -85,11 +85,15 @@ run failures with a nonzero exit, not hidden by the help fast path.
 The issue reader and Git-worktree utilities also avoid preparation-only imports;
 criteria extraction loads only when `prepareAttended` reaches preparation.
 
-The final argument is an explicit comma-separated acceptance-kind selection.
+The fourth positional argument is an explicit comma-separated acceptance-kind selection.
 `Rule` is the human-approved recommendation, not an implicit extractor default.
+Both profile flags are required; one model and reasoning effort are passed
+explicitly to decomposition, test, implementation, and review. Missing or blank
+values fail before issue retrieval rather than falling back to Auto. The CLI
+does not restrict model names to a built-in allowlist.
 The issue is read from GitHub as prose; no story fixture or `## Criteria` heading
 is required. The current target is `react-vitest` only. Its required `publication_base` in
-`.loop/targets.json` selects the exact PR base branch (`main` in this repo);
+`.loop/targets.json` selects the exact PR base branch;
 missing or invalid values fail before an agent starts. The attended run also
 requires a clean target checkout at invocation, before agent execution.
 Review and commit existing changes yourself before starting; the harness
@@ -257,8 +261,9 @@ copilot -p <prompt> --output-format json -C <worktree>
 Review exposes only view/glob/grep and denies all built-in `write`.
 No shell, network, MCP, or delegation tools are exposed.
 No `--allow-all-paths`, `--add-dir`, `--fleet`, or `--acp` is enabled.
-Explicit `profile.model` and `profile.reasoningEffort` can be supplied through
-`prepareAttended`; otherwise the CLI's configured model selection applies.
+The attended CLI requires explicit `profile.model` and
+`profile.reasoningEffort`; programmatic callers may still supply profiles
+directly to `prepareAttended` and `createExecution`.
 `--fleet` (built-in agent orchestration) and `--acp` (server transport) are
 unevaluated alternatives, not adopted scheduling behavior.
 
@@ -276,9 +281,11 @@ the configured model; isolated sandbox probes reported 1 each. This is not a
 fixed per-leg cost.
 Task 8 totals terminal usage once per invocation and reports missing evidence
 as incomplete, not as zero cost. Task and wave APIs return measured counters
-and parked reasons. Preparation usage remains visible at Gate 1; Gate 2
-displays approved wave evidence in the deterministic publication lifecycle,
-but this presentation has not been accepted live. The optional Copilot
+and parked reasons. The CLI prints cumulative measured premium requests at
+Gate 1, after every settled wave, and at Gate 2; missing accounting is labeled
+incomplete. This is observation, not an automatic premium-request ceiling or
+an additional human gate. The operator must compare with the approved ceiling
+and stop at a gate or cancel the command if necessary. The optional Copilot
 `--max-ai-credits` ceiling is deferred defense-in-depth: CLI 1.0.88 enforcement
 and terminal behavior remain unverified without a separately approved live
 probe. It is not wired or enabled, and is not a premium-request cap.

@@ -3,7 +3,7 @@ import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 
 const usage =
-  'Usage: node .loop\\run.mjs <owner/repo> <issue> <spec-relative-path> <acceptance-kinds-comma-separated>\nAttended react-vitest loop: Gate 1, automated waves, then Gate 2. The human commits and pushes; the harness only confirms PRs.\n';
+  'Usage: node .loop\\run.mjs <owner/repo> <issue> <spec-relative-path> <acceptance-kinds-comma-separated> --model <model> --reasoning-effort <level>\nAttended react-vitest loop: Gate 1, automated waves, then Gate 2. The human commits and pushes; the harness only confirms PRs.\n';
 
 /** Command-line adapter for the attended two-gate loop. */
 export async function runCli(
@@ -24,12 +24,34 @@ export async function runCli(
   }
   let terminal;
   let code = 1;
+  let premiumRequests = 0;
+  let lastPreparationPremiumRequests = 0;
+  let usageComplete = true;
+  const measured = (counters) =>
+    counters?.find(({ name, unit }) => name === 'premiumRequests' && unit === 'premium-requests')?.value;
+  const usageLine = () =>
+    usageComplete
+      ? `measured premium requests: ${premiumRequests}`
+      : `known premium requests: ${premiumRequests}; accounting incomplete`;
   const controller = new AbortController();
   const cancel = () => controller.abort();
   process.once('SIGINT', cancel);
   try {
-    if (argv.length !== 4) throw new Error(usage);
+    if (
+      argv.length !== 8 ||
+      argv[4] !== '--model' ||
+      typeof argv[5] !== 'string' ||
+      !argv[5].trim() ||
+      argv[5].startsWith('--') ||
+      argv[6] !== '--reasoning-effort' ||
+      typeof argv[7] !== 'string' ||
+      !argv[7].trim() ||
+      argv[7].startsWith('--')
+    )
+      throw new Error(usage);
     const [repository, number, specPath, kinds] = argv;
+    const profile = { model: argv[5], reasoningEffort: argv[7] };
+    const profiles = Object.fromEntries(['test', 'implement', 'review'].map((leg) => [leg, profile]));
     const readIssue = issueReader ?? (await import('./attended.mjs')).readIssue;
     const issue = await readIssue(repository, Number(number));
     if (!ask) {
@@ -45,10 +67,20 @@ export async function runCli(
       specPath,
       target: 'react-vitest',
       acceptanceKinds: kinds.split(','),
+      profile,
+      profiles,
       signal: controller.signal,
       gate1: async (review) => {
+        if (Array.isArray(review.usage)) {
+          const current = measured(review.usage);
+          if (typeof current === 'number' && Number.isFinite(current) && current >= lastPreparationPremiumRequests) {
+            premiumRequests += current - lastPreparationPremiumRequests;
+            lastPreparationPremiumRequests = current;
+          } else usageComplete = false;
+        } else if (review.findings) lastPreparationPremiumRequests = 0;
+        else usageComplete = false;
         write(
-          `Gate 1: review every task, file, wave and PR group before execution.\n${JSON.stringify(review, null, 2)}\n`
+          `Gate 1: ${usageLine()}. Review every task, file, wave and PR group before execution.\n${JSON.stringify(review, null, 2)}\n`
         );
         while (true) {
           const decision = (await ask('approve / revise / stop: ')).trim().toLowerCase();
@@ -58,9 +90,16 @@ export async function runCli(
           write('Invalid decision; enter approve, revise, or stop.\n');
         }
       },
+      reportWave: async ({ index, status, usage }) => {
+        const count = measured(usage?.counters);
+        if (typeof count === 'number' && Number.isFinite(count) && count >= 0) premiumRequests += count;
+        else usageComplete = false;
+        if (usage?.complete !== true || usage.missingExecutions !== 0) usageComplete = false;
+        write(`Wave ${index} barrier (${status}): ${usageLine()}.\n`);
+      },
       gate2: async (review) => {
         write(
-          `Gate 2: the human must commit and push each staged worktree before answering publish. The harness never commits or pushes. Review the exact trees and evidence:\n${JSON.stringify(review, null, 2)}\n`
+          `Gate 2: ${usageLine()}. The human must commit and push each staged worktree before answering publish. The harness never commits or pushes. Review the exact trees and evidence:\n${JSON.stringify(review, null, 2)}\n`
         );
         while (true) {
           const decision = (await ask('publish / stop: ')).trim().toLowerCase();

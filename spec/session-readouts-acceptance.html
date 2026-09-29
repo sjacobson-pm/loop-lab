@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Session readout helpers - acceptance spec</title>
+  </head>
+  <body>
+    <main>
+      <h1>Session readout helpers</h1>
+      <p>
+        Provide two independent, pure JavaScript helpers for future session readouts. Each helper owns its own module
+        and colocated tests; neither needs application wiring or a shared export file.
+      </p>
+      <section aria-label="Acceptance rules">
+        <h2>Acceptance rules</h2>
+        <div
+          id="rule-session-count-label"
+          data-pd-slot="rules"
+          data-pd-name="session-count-label"
+          data-pd-kind="Rule"
+          data-pd-screen="Shared"
+          data-pd-detail="src/features/sessionReadouts/formatSessionCount.js and its colocated test">
+          Export formatSessionCount(count). For a nonnegative safe integer, return "1 session" when count is 1,
+          otherwise return the decimal count followed by " sessions" (including "0 sessions"). For any other input,
+          throw RangeError.
+        </div>
+        <div
+          id="rule-elapsed-time-label"
+          data-pd-slot="rules"
+          data-pd-name="elapsed-time-label"
+          data-pd-kind="Rule"
+          data-pd-screen="Shared"
+          data-pd-detail="src/features/sessionReadouts/formatElapsedTime.js and its colocated test">
+          Export formatElapsedTime(totalSeconds). For a nonnegative safe integer number of seconds, return elapsed time
+          as h:mm:ss: hours are unpadded and may exceed 24, while minutes and seconds are always two digits from 00
+          through 59. For example, 0 is "0:00:00", 59 is "0:00:59", 60 is "0:01:00", and 3661 is "1:01:01". For any
+          other input, throw RangeError.
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

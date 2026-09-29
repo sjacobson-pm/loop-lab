@@ -36,6 +36,7 @@ async function continueApproved(input, approved, dependencies) {
     target: targetConfig,
     index,
     signal: input.signal,
+    profiles: input.profiles,
     ...(input.agent ? { agent: input.agent } : {}),
     ...(input.runner ? { runner: input.runner } : {}),
   });
@@ -61,6 +62,7 @@ async function continueApproved(input, approved, dependencies) {
       });
       const wave = await execution.runWave(tasks, { baseline });
       waves.push(wave);
+      await input.reportWave?.({ index: waves.length, status: wave.status, usage: wave.usage });
       if (wave.status !== 'ready') return { status: wave.status, wave, pullRequests: [] };
       baseline = wave.baseline;
     }

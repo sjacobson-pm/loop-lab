@@ -127,12 +127,28 @@ describe('attended Gate 1 through Gate 2 lifecycle', () => {
   it('does not present Gate 2 after a parked wave and always disposes execution', async () => {
     const execution = {
       baseline: 'start',
-      runWave: async () => ({ status: 'parked', tasks: [{ taskId: 'A', status: 'parked' }] }),
+      runWave: async () => ({
+        status: 'parked',
+        tasks: [{ taskId: 'A', status: 'parked' }],
+        usage: {
+          counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 3 }],
+          complete: true,
+          missingExecutions: 0,
+        },
+      }),
       dispose: vi.fn(),
     };
+    const reportWave = vi.fn();
     const publisher = vi.fn();
     const result = await runAttended(
-      { root: 'fixture-root', issue, target: 'react-vitest', specPath: 'spec/x.html', acceptanceKinds: ['Rule'] },
+      {
+        root: 'fixture-root',
+        issue,
+        target: 'react-vitest',
+        specPath: 'spec/x.html',
+        acceptanceKinds: ['Rule'],
+        reportWave,
+      },
       {
         prepare: async () => approved,
         executionFactory: async () => execution,
@@ -147,6 +163,15 @@ describe('attended Gate 1 through Gate 2 lifecycle', () => {
       }
     );
     expect(result.status).toBe('parked');
+    expect(reportWave).toHaveBeenCalledExactlyOnceWith({
+      index: 1,
+      status: 'parked',
+      usage: {
+        counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 3 }],
+        complete: true,
+        missingExecutions: 0,
+      },
+    });
     expect(publisher).not.toHaveBeenCalled();
     expect(execution.dispose).toHaveBeenCalledTimes(1);
   });

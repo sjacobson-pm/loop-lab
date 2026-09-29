@@ -7,7 +7,10 @@ import { copyFile, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { runAttended } from './lifecycle.mjs';
 import { runCli } from './run.mjs';
+
+const pinnedArgs = ['owner/repo', '42', 'spec/x.html', 'Rule', '--model', 'gpt-5-mini', '--reasoning-effort', 'low'];
 
 describe('attended CLI', () => {
   it('prints usage without invoking GitHub or agents', async () => {
@@ -40,7 +43,7 @@ describe('attended CLI', () => {
       return { status: 'stopped' };
     };
     // * ACT
-    const code = await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+    const code = await runCli(pinnedArgs, {
       write: (text) => {
         output += text;
       },
@@ -57,7 +60,7 @@ describe('attended CLI', () => {
   it('offers the staged worktrees at one Gate 2 and reports only confirmed PR URLs as success', async () => {
     const answers = ['approve', 'publish'];
     let transcript = '';
-    const result = await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+    const result = await runCli(pinnedArgs, {
       issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
       ask: async () => answers.shift(),
       write: (text) => {
@@ -84,7 +87,7 @@ describe('attended CLI', () => {
   it('re-prompts an invalid Gate 2 response without granting publication', async () => {
     const answers = ['later', 'stop'];
     let transcript = '';
-    const code = await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+    const code = await runCli(pinnedArgs, {
       issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
       ask: async () => answers.shift(),
       write: (text) => {
@@ -107,7 +110,7 @@ describe('attended CLI', () => {
     };
     // * ACT / ASSERT
     expect(
-      await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+      await runCli(pinnedArgs, {
         write: () => {},
         ask: async () => decision,
         prepare,
@@ -124,7 +127,7 @@ describe('attended CLI', () => {
     // * ACT / ASSERT
     expect(await runCli([], { write })).toBe(1);
     expect(
-      await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+      await runCli(pinnedArgs, {
         write,
         issueReader: async () => {
           throw new Error('GitHub unavailable');
@@ -155,7 +158,7 @@ describe('attended CLI', () => {
       if (chunk.toString().includes('approve / revise / stop:')) queueMicrotask(() => input.write('approve\n'));
     });
     // * ACT
-    const code = await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+    const code = await runCli(pinnedArgs, {
       input,
       output,
       issueReader: async () => ({}),
@@ -172,12 +175,7 @@ describe('attended CLI', () => {
   it.each([
     ['help', ['--help'], 0, 'Gate 1'],
     ['invalid usage', [], 1, 'Usage:'],
-    [
-      'requested execution',
-      ['owner/repo', '42', 'spec/x.html', 'Rule'],
-      1,
-      'Preparation failed: Execution dependency evaluated',
-    ],
+    ['requested execution', pinnedArgs, 1, 'Preparation failed: Execution dependency evaluated'],
   ])('keeps %s on the correct side of the execution import boundary', async (_, args, code, message) => {
     // * ARRANGE
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'loop-cli-boundary-')));
@@ -205,7 +203,7 @@ describe('attended CLI', () => {
     // * ARRANGE
     let output = '';
     // * ACT
-    const code = await runCli(['not-a-repository', '42', 'spec/x.html', 'Rule'], {
+    const code = await runCli(['not-a-repository', ...pinnedArgs.slice(1)], {
       write: (text) => {
         output += text;
       },
@@ -218,7 +216,7 @@ describe('attended CLI', () => {
     // * ARRANGE
     let output = '';
     // * ACT
-    const code = await runCli(['owner/repo', '42', '../outside.html', 'Rule'], {
+    const code = await runCli(['owner/repo', '42', '../outside.html', ...pinnedArgs.slice(3)], {
       issueReader: async () => ({ number: 42 }),
       ask: async () => 'stop',
       write: (text) => {
@@ -235,7 +233,7 @@ describe('attended CLI', () => {
     let output = '';
     const prepare = vi.fn();
     // * ACT
-    const code = await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+    const code = await runCli(pinnedArgs, {
       input: new PassThrough(),
       write: (text) => {
         output += text;
@@ -252,7 +250,7 @@ describe('attended CLI', () => {
     // * ARRANGE
     let aborted;
     // * ACT
-    const code = await runCli(['owner/repo', '42', 'spec/x.html', 'Rule'], {
+    const code = await runCli(pinnedArgs, {
       write: () => {},
       ask: async () => 'stop',
       issueReader: async () => ({}),
@@ -284,5 +282,157 @@ describe('attended CLI', () => {
       process.exitCode = previousCode;
       output.mockRestore();
     }
+  });
+  it('passes one explicit profile to decomposition and all three execution legs', async () => {
+    const observed = {};
+    const plan = {
+      issue: 42,
+      target: 'react-vitest',
+      tasks: [{ id: 'A', depends_on: [], files_modified: ['src/a.js'] }],
+      waves: [],
+    };
+    const hashes = { spec: 'spec', target: 'target', plan: 'plan' };
+    const code = await runCli(pinnedArgs, {
+      issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
+      ask: async () => 'stop',
+      write: () => {},
+      run: (input) =>
+        runAttended(input, {
+          checkBaseline: async () => {},
+          prepare: async ({ profile }) => {
+            observed.decompose = profile;
+            return { status: 'planned', plan, hashes };
+          },
+          loadApproved: async () => ({
+            plan,
+            index: { spec_path: 'spec/x.html' },
+            targetConfig: { publication_base: 'main' },
+          }),
+          executionFactory: async ({ profiles }) => {
+            observed.execution = profiles;
+            return { baseline: 'start', dispose: async () => {} };
+          },
+          localFactory: () => ({ readInputs: async () => hashes }),
+          publisher: async () => ({ status: 'stopped', pullRequests: [] }),
+        }),
+    });
+    expect(code).toBe(0);
+    expect(observed).toEqual({
+      decompose: { model: 'gpt-5-mini', reasoningEffort: 'low' },
+      execution: {
+        test: { model: 'gpt-5-mini', reasoningEffort: 'low' },
+        implement: { model: 'gpt-5-mini', reasoningEffort: 'low' },
+        review: { model: 'gpt-5-mini', reasoningEffort: 'low' },
+      },
+    });
+  });
+  it('reports cumulative measured premium requests at both gates and a wave barrier', async () => {
+    const answers = ['approve', 'stop'];
+    let output = '';
+    const code = await runCli(pinnedArgs, {
+      issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
+      ask: async () => answers.shift(),
+      write: (text) => {
+        output += text;
+      },
+      run: async ({ gate1, reportWave, gate2 }) => {
+        await gate1({
+          usage: [{ name: 'premiumRequests', unit: 'premium-requests', value: 2 }],
+          plan: {},
+          prGroups: [],
+        });
+        await reportWave({
+          index: 1,
+          status: 'ready',
+          usage: {
+            counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 3 }],
+            complete: true,
+            missingExecutions: 0,
+          },
+        });
+        await gate2({ groups: [], treeDigests: [], evidence: {} });
+        return { status: 'stopped' };
+      },
+    });
+    expect(code).toBe(0);
+    expect(output).toContain('Gate 1: measured premium requests: 2');
+    expect(output).toContain('Wave 1 barrier (ready): measured premium requests: 5');
+    expect(output).toContain('Gate 2: measured premium requests: 5');
+    expect(answers).toEqual([]);
+  });
+  it('marks incomplete wave accounting rather than reporting a false complete total', async () => {
+    let output = '';
+    const code = await runCli(pinnedArgs, {
+      issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
+      ask: async () => 'stop',
+      write: (text) => {
+        output += text;
+      },
+      run: async ({ gate1, reportWave }) => {
+        await gate1({ usage: [{ name: 'premiumRequests', unit: 'premium-requests', value: 2 }] });
+        await reportWave({
+          index: 1,
+          status: 'parked',
+          usage: { counters: [], complete: false, missingExecutions: 1 },
+        });
+        return { status: 'stopped' };
+      },
+    });
+    expect(code).toBe(0);
+    expect(output).toContain('Wave 1 barrier (parked): known premium requests: 2; accounting incomplete');
+  });
+  it('keeps prior wave usage when Gate 1 re-enters with a new decomposition attempt', async () => {
+    const answers = ['approve', 'revise', 'split the tasks', 'stop'];
+    let output = '';
+    const counter = (value) => [{ name: 'premiumRequests', unit: 'premium-requests', value }];
+    const code = await runCli(pinnedArgs, {
+      issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
+      ask: async () => answers.shift(),
+      write: (text) => {
+        output += text;
+      },
+      run: async ({ gate1, reportWave }) => {
+        await gate1({ usage: counter(2) });
+        await reportWave({
+          index: 1,
+          status: 'gate1',
+          usage: { counters: counter(3), complete: true, missingExecutions: 0 },
+        });
+        await gate1({ findings: [{ message: 'Revise task ownership' }] });
+        await gate1({ usage: counter(1) });
+        return { status: 'stopped' };
+      },
+    });
+    expect(code).toBe(0);
+    expect(output).toContain('Wave 1 barrier (gate1): measured premium requests: 5');
+    expect(output).toContain('Gate 1: measured premium requests: 6');
+    expect(answers).toEqual([]);
+  });
+  it.each([
+    ['absent', pinnedArgs.slice(0, 4)],
+    ['missing model', [...pinnedArgs.slice(0, 4), '--reasoning-effort', 'low']],
+    ['blank model', [...pinnedArgs.slice(0, 4), '--model', ' ', '--reasoning-effort', 'low']],
+    ['non-string model', [...pinnedArgs.slice(0, 4), '--model', 42, '--reasoning-effort', 'low']],
+    ['option-shaped model', [...pinnedArgs.slice(0, 4), '--model', '--other', '--reasoning-effort', 'low']],
+    ['missing reasoning effort', [...pinnedArgs.slice(0, 4), '--model', 'gpt-5-mini']],
+    ['blank reasoning effort', [...pinnedArgs.slice(0, -1), ' \t']],
+    ['non-string reasoning effort', [...pinnedArgs.slice(0, -1), null]],
+    ['duplicate model', [...pinnedArgs.slice(0, 6), '--model', 'gpt-5-mini']],
+    ['unknown option', [...pinnedArgs.slice(0, 6), '--unknown', 'low']],
+  ])('refuses %s profile flags before loading the issue or execution graph', async (_, args) => {
+    const issueReader = vi.fn();
+    const run = vi.fn();
+    let output = '';
+    const code = await runCli(args, {
+      issueReader,
+      run,
+      write: (text) => {
+        output += text;
+      },
+    });
+    expect(code).toBe(1);
+    expect(output).toContain('Usage:');
+    expect(issueReader).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
   });
 });
