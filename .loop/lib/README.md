@@ -41,7 +41,9 @@ See the [attended runner](../README.md) for the real host boundary and limitatio
 ## Task sequencing and integration APIs
 
 - `judgeSuite(run)` checks a complete nonempty baseline or integration suite
-  without inventing named criterion bindings.
+  without inventing named criterion bindings. Duplicate unbound test names
+  are valid only when every occurrence passes; RED/GREEN require exactly one
+  occurrence for each criterion-bound identity.
 - `validateBindings(bindings, task, testFiles)` validates exact identities,
   ownership and complete anchor coverage, and returns frozen copies.
 - `runTask({ task, target, baseline, index, maxRepairs, maxAgentExecutions }, ports)` owns the

@@ -381,6 +381,73 @@ describe('attended CLI', () => {
     expect(code).toBe(0);
     expect(output).toContain('Wave 1 barrier (parked): known premium requests: 2; accounting incomplete');
   });
+  it('reports zero premium requests when a settled wave parks before any agent execution', async () => {
+    let output = '';
+    const code = await runCli(pinnedArgs, {
+      issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
+      ask: async () => 'approve',
+      write: (text) => {
+        output += text;
+      },
+      run: async ({ gate1, reportWave }) => {
+        await gate1({ usage: [{ name: 'premiumRequests', unit: 'premium-requests', value: 0 }] });
+        await reportWave({
+          index: 1,
+          status: 'parked',
+          usage: { counters: [], complete: true, missingExecutions: 0 },
+          agentExecutions: 0,
+        });
+        return { status: 'stopped' };
+      },
+    });
+    expect(code).toBe(0);
+    expect(output).toContain('Wave 1 barrier (parked): measured premium requests: 0');
+    expect(output).not.toContain('accounting incomplete');
+  });
+  it('marks a settled wave incomplete when an agent ran without premium-request counters', async () => {
+    let output = '';
+    const code = await runCli(pinnedArgs, {
+      issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
+      ask: async () => 'approve',
+      write: (text) => {
+        output += text;
+      },
+      run: async ({ gate1, reportWave }) => {
+        await gate1({ usage: [{ name: 'premiumRequests', unit: 'premium-requests', value: 2 }] });
+        await reportWave({
+          index: 1,
+          status: 'parked',
+          usage: { counters: [], complete: true, missingExecutions: 0 },
+          agentExecutions: 1,
+        });
+        return { status: 'stopped' };
+      },
+    });
+    expect(code).toBe(0);
+    expect(output).toContain('Wave 1 barrier (parked): known premium requests: 2; accounting incomplete');
+  });
+  it('does not treat absent usage counters as a measured zero', async () => {
+    let output = '';
+    const code = await runCli(pinnedArgs, {
+      issueReader: async () => ({ number: 42, repository: 'owner/repo', title: 'Title', body: 'Issue prose' }),
+      ask: async () => 'approve',
+      write: (text) => {
+        output += text;
+      },
+      run: async ({ gate1, reportWave }) => {
+        await gate1({ usage: [{ name: 'premiumRequests', unit: 'premium-requests', value: 0 }] });
+        await reportWave({
+          index: 1,
+          status: 'parked',
+          usage: { complete: true, missingExecutions: 0 },
+          agentExecutions: 0,
+        });
+        return { status: 'stopped' };
+      },
+    });
+    expect(code).toBe(0);
+    expect(output).toContain('Wave 1 barrier (parked): known premium requests: 0; accounting incomplete');
+  });
   it('keeps prior wave usage when Gate 1 re-enters with a new decomposition attempt', async () => {
     const answers = ['approve', 'revise', 'split the tasks', 'stop'];
     let output = '';

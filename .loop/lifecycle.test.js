@@ -124,12 +124,12 @@ describe('attended Gate 1 through Gate 2 lifecycle', () => {
     expect(events).toEqual(['staged', 'published', 'disposed']);
   });
 
-  it('does not present Gate 2 after a parked wave and always disposes execution', async () => {
+  it.each([0, 2, null])('reports %s agent executions after a parked wave and disposes execution', async (total) => {
     const execution = {
       baseline: 'start',
       runWave: async () => ({
         status: 'parked',
-        tasks: [{ taskId: 'A', status: 'parked' }],
+        tasks: [{ taskId: 'A', status: 'parked', evidence: { termination: { total } } }],
         usage: {
           counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 3 }],
           complete: true,
@@ -166,6 +166,7 @@ describe('attended Gate 1 through Gate 2 lifecycle', () => {
     expect(reportWave).toHaveBeenCalledExactlyOnceWith({
       index: 1,
       status: 'parked',
+      agentExecutions: total,
       usage: {
         counters: [{ name: 'premiumRequests', unit: 'premium-requests', value: 3 }],
         complete: true,

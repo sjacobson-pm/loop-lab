@@ -39,6 +39,27 @@ describe('target-neutral verdicts', () => {
     expect(judgeSuite({ ...green(), tests: [] }).status).toBe('INVALID_GREEN');
     expect(judgeSuite(null).status).toBe('INVALID_GREEN');
   });
+  it('allows duplicate unbound passes but rejects ambiguity for a bound identity', () => {
+    const duplicate = { ...green().tests[0], id: 'b::other', file: 'b', name: 'other' };
+    const greenRun = green();
+    greenRun.tests.push(duplicate, { ...duplicate });
+    const redRun = red();
+    redRun.tests.push(duplicate, { ...duplicate });
+
+    expect(judgeSuite(greenRun).status).toBe('GREEN');
+    expect(judgeGreen(greenRun, [binding]).status).toBe('GREEN');
+    expect(judgeRed(redRun, [binding]).status).toBe('RED');
+    greenRun.tests.push({ ...greenRun.tests[0] });
+    redRun.tests.push({ ...redRun.tests[0] });
+    expect(judgeGreen(greenRun, [binding]).status).toBe('INVALID_GREEN');
+    expect(judgeRed(redRun, [binding]).status).toBe('INVALID_RED');
+  });
+  it('rejects any failing duplicate in a baseline or integration suite', () => {
+    const run = green();
+    run.tests.push({ ...run.tests[0] }, { ...assertion });
+    run.exitCode = 1;
+    expect(judgeSuite(run).status).toBe('INVALID_GREEN');
+  });
   it('accepts only named behavioral RED and then a complete passing GREEN', () => {
     // * ARRANGE / ACT / ASSERT
     expect(judgeRed(red(), [binding])).toEqual({ status: 'RED', reasons: [] });

@@ -94,17 +94,13 @@ export function parseVitestResults(json, processResult, repoRoot) {
         'Invalid structured test evidence.'
       );
       const id = `${relativeFile(test.file, repoRoot)}::${test.name}`;
-      requireEvidence(!details.has(id), 'Duplicate structured test identity.');
-      details.set(id, test);
+      if (!details.has(id)) details.set(id, []);
+      details.get(id).push(test);
     }
-    const observed = new Set();
-    const files = new Set();
     const totals = { passed: 0, failed: 0, skipped: 0, todo: 0 };
     const states = { passed: 'pass', failed: 'fail', skipped: 'skip', todo: 'todo' };
     for (const suite of report.testResults) {
       const file = relativeFile(suite?.name, repoRoot);
-      requireEvidence(!files.has(file), 'Duplicate report file.');
-      files.add(file);
       requireEvidence(
         Array.isArray(suite.assertionResults) &&
           ['passed', 'failed'].includes(suite.status) &&
@@ -121,9 +117,21 @@ export function parseVitestResults(json, processResult, repoRoot) {
           'Ambiguous full test name.'
         );
         const id = `${file}::${test.fullName}`;
-        const detail = details.get(id);
-        requireEvidence(!observed.has(id) && detail, 'Duplicate or unmatched test identity.');
-        observed.add(id);
+        const candidates = details.get(id);
+        requireEvidence(candidates?.length, 'Duplicate or unmatched test identity.');
+        requireEvidence(
+          Array.isArray(test.failureMessages) && test.failureMessages.every(text),
+          'Failure evidence disagrees.'
+        );
+        const index = candidates.findIndex(
+          (detail) =>
+            detail.state === states[test.status] &&
+            detail.errors.length === test.failureMessages.length &&
+            detail.errors.every((error, errorIndex) => test.failureMessages[errorIndex].includes(error.message)) &&
+            (test.status === 'failed' ? detail.errors.length > 0 : detail.errors.length === 0)
+        );
+        requireEvidence(index !== -1, 'Incomplete or contradictory test state or failure evidence.');
+        const [detail] = candidates.splice(index, 1);
         requireEvidence(
           Object.hasOwn(states, test.status) && detail.state === states[test.status],
           'Incomplete or contradictory test state.'
@@ -160,7 +168,10 @@ export function parseVitestResults(json, processResult, repoRoot) {
         'Suite status contradicts failed tests.'
       );
     }
-    requireEvidence(observed.size === details.size, 'Extra structured test evidence.');
+    requireEvidence(
+      [...details.values()].every((tests) => tests.length === 0),
+      'Extra structured test evidence.'
+    );
     requireEvidence(
       report.numTotalTests === result.tests.length &&
         report.numPassedTests === totals.passed &&

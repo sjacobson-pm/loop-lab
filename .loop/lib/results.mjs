@@ -31,7 +31,7 @@ function judge(run, bindings, phase, requireBindings = true) {
     !Array.isArray(run.errors) ||
     !Array.isArray(run.tests) ||
     run.tests.length === 0 ||
-    !uniqueIdentities(run.tests) ||
+    !run.tests.every(hasIdentity) ||
     !run.tests.every(
       ({ status, failureKind, message }) =>
         ['passed', 'failed', 'skipped'].includes(status) &&
@@ -45,8 +45,10 @@ function judge(run, bindings, phase, requireBindings = true) {
     return invalid('The test process did not exit normally for this phase.');
 
   const targets = new Set(bindings.map(({ id }) => id));
-  const observed = new Map(run.tests.map((test) => [test.id, test]));
-  if (bindings.some(({ id }) => !observed.has(id))) return invalid('A named target test was not discovered.');
+  const counts = new Map();
+  for (const test of run.tests) if (targets.has(test.id)) counts.set(test.id, (counts.get(test.id) ?? 0) + 1);
+  if (bindings.some(({ id }) => counts.get(id) !== 1))
+    return invalid('A named target test was not discovered exactly once.');
   for (const test of run.tests) {
     if (phase === 'RED' && targets.has(test.id)) {
       if (test.status !== 'failed' || test.failureKind !== 'assertion' || !test.message.trim())

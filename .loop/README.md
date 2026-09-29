@@ -146,9 +146,12 @@ temporary report directory and removes it before returning. Installation, build,
 spawn, cancellation, timeout, report, parser, and cleanup failures remain explicit
 in incomplete evidence; they cannot authorize implementation.
 
-The React profile retains `vitest-json`, with an additional harness reporter for
-structured errors. The parser cross-checks test identities, states, error messages,
-suite/test counts, process exit and timestamps. Named RED requires assertion
+The React profile runs only the `app` Vitest project (`--project app`) and retains
+`vitest-json`, with an additional harness reporter for structured errors. The parser
+cross-checks every test occurrence across identities, states, error messages,
+suite/test counts, process exit and timestamps. Duplicate names outside criterion
+bindings are permitted; each bound test must occur exactly once. Baseline and
+integration runs still require every occurrence to pass. Named RED requires assertion
 comparisons from a recognized test-body runner boundary, not merely an
 `AssertionError` string. Setup, returned cleanup and `onTestFinished` assertions
 are not valid RED. Unknown provenance fails closed. These contracts were
@@ -290,6 +293,8 @@ Task 8 totals terminal usage once per invocation and reports missing evidence
 as incomplete, not as zero cost. Task and wave APIs return measured counters
 and parked reasons. The CLI prints cumulative measured premium requests at
 Gate 1, after every settled wave, and at Gate 2; missing accounting is labeled
+incomplete. A complete wave parked before any agent execution contributes zero
+requests; if an agent ran without a premium-request counter, accounting stays
 incomplete. This is observation, not an automatic premium-request ceiling or
 an additional human gate. The operator must compare with the approved ceiling
 and stop at a gate or cancel the command if necessary. The optional Copilot

@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseVitestResults } from './vitest-results.mjs';
-import { judgeGreen, judgeRed } from './results.mjs';
+import { judgeGreen, judgeRed, judgeSuite } from './results.mjs';
 
 const root = path.resolve('fixture');
 const file = path.join(root, 'src/a.test.js');
@@ -61,6 +61,80 @@ function fixture(failed = true) {
 }
 
 describe('Vitest JSON and supplemental evidence parser', () => {
+  it('pairs duplicate identities by state even when the reporter orders them differently', () => {
+    const { report, process } = fixture();
+    report.testResults[0].assertionResults.unshift({
+      ...report.testResults[0].assertionResults[0],
+      status: 'passed',
+      failureMessages: [],
+    });
+    report.numTotalTests = 2;
+    report.numPassedTests = 1;
+    process.evidence.tests.push({ ...process.evidence.tests[0], state: 'pass', errors: [] });
+
+    const run = parseVitestResults(report, process, root);
+
+    expect(run.complete).toBe(true);
+    expect(run.errors).toEqual([]);
+    expect(run.tests.map(({ status, failureKind }) => [status, failureKind])).toEqual([
+      ['passed', null],
+      ['failed', 'assertion'],
+    ]);
+    expect(judgeSuite(run).status).toBe('INVALID_GREEN');
+    expect(judgeRed(run, [binding]).status).toBe('INVALID_RED');
+  });
+
+  it('accepts duplicate passing identities even across repeated report files', () => {
+    const { report, process } = fixture(false);
+    report.testResults.push(structuredClone(report.testResults[0]));
+    process.evidence.tests.push(structuredClone(process.evidence.tests[0]));
+    report.numTotalTests = report.numPassedTests = 2;
+
+    const run = parseVitestResults(report, process, root);
+
+    expect(run.complete).toBe(true);
+    expect(run.tests).toHaveLength(2);
+    expect(judgeSuite(run).status).toBe('GREEN');
+    expect(judgeGreen(run, [binding]).status).toBe('INVALID_GREEN');
+  });
+
+  it('matches reversed duplicate failures by their formatted messages', () => {
+    const { report, process } = fixture();
+    report.testResults[0].assertionResults.push({
+      ...report.testResults[0].assertionResults[0],
+      failureMessages: ['AssertionError: expected 2 to be 3'],
+    });
+    process.evidence.tests.unshift({
+      ...process.evidence.tests[0],
+      errors: [{ ...process.evidence.tests[0].errors[0], message: 'expected 2 to be 3' }],
+    });
+    report.numTotalTests = report.numFailedTests = 2;
+
+    const run = parseVitestResults(report, process, root);
+
+    expect(run.complete).toBe(true);
+    expect(run.tests.map(({ message }) => message)).toEqual(['expected 0 to be 1', 'expected 2 to be 3']);
+    expect(judgeSuite(run).status).toBe('INVALID_GREEN');
+  });
+
+  it.each(['state', 'failure message', 'extra counterpart'])(
+    'rejects contradictory duplicate %s evidence',
+    (difference) => {
+      const { report, process } = fixture();
+      report.testResults[0].assertionResults.push(structuredClone(report.testResults[0].assertionResults[0]));
+      process.evidence.tests.push(structuredClone(process.evidence.tests[0]));
+      report.numTotalTests = report.numFailedTests = 2;
+      if (difference === 'state') process.evidence.tests[1].state = 'pass';
+      if (difference === 'failure message') process.evidence.tests[1].errors[0].message = 'different failure';
+      if (difference === 'extra counterpart') process.evidence.tests.push(structuredClone(process.evidence.tests[0]));
+
+      const run = parseVitestResults(report, process, root);
+
+      expect(run.complete).toBe(false);
+      expect(run.errors).toEqual(expect.arrayContaining([expect.objectContaining({ kind: 'parser' })]));
+    }
+  );
+
   it('retains an unhandled process error even when every test passed', () => {
     // * ARRANGE
     const { report, process } = fixture(false);

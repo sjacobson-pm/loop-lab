@@ -90,10 +90,11 @@ export async function runCli(
           write('Invalid decision; enter approve, revise, or stop.\n');
         }
       },
-      reportWave: async ({ index, status, usage }) => {
+      reportWave: async ({ index, status, usage, agentExecutions }) => {
         const count = measured(usage?.counters);
         if (typeof count === 'number' && Number.isFinite(count) && count >= 0) premiumRequests += count;
-        else usageComplete = false;
+        else if (!(agentExecutions === 0 && Array.isArray(usage?.counters) && usage.counters.length === 0))
+          usageComplete = false;
         if (usage?.complete !== true || usage.missingExecutions !== 0) usageComplete = false;
         write(`Wave ${index} barrier (${status}): ${usageLine()}.\n`);
       },

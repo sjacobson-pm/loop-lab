@@ -62,7 +62,12 @@ async function continueApproved(input, approved, dependencies) {
       });
       const wave = await execution.runWave(tasks, { baseline });
       waves.push(wave);
-      await input.reportWave?.({ index: waves.length, status: wave.status, usage: wave.usage });
+      const totals = wave.tasks?.map(({ evidence }) => evidence?.termination?.total);
+      const agentExecutions =
+        totals?.length && totals.every((total) => Number.isSafeInteger(total) && total >= 0)
+          ? totals.reduce((sum, total) => sum + total, 0)
+          : null;
+      await input.reportWave?.({ index: waves.length, status: wave.status, usage: wave.usage, agentExecutions });
       if (wave.status !== 'ready') return { status: wave.status, wave, pullRequests: [] };
       baseline = wave.baseline;
     }

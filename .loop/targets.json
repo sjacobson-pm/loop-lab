@@ -12,7 +12,7 @@
         "require_named_assertion_failure": true,
         "allow_unrelated_failures": false
       },
-      "test": ["npx", "vitest", "run", "--reporter=json", "--outputFile={{results}}"],
+      "test": ["npx", "vitest", "run", "--project", "app", "--reporter=json", "--outputFile={{results}}"],
       "results_format": "vitest-json",
       "stack": "react-vitest",
       "review_standards": {

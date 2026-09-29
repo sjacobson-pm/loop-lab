@@ -97,10 +97,31 @@ describe('trusted target runner', { timeout: 30_000 }, () => {
       command_timeout_ms: 900_000,
       install: ['npm', 'ci'],
       build: null,
+      test: ['npx', 'vitest', 'run', '--project', 'app', '--reporter=json', '--outputFile={{results}}'],
       results_format: 'vitest-json',
       red_policy: { require_named_assertion_failure: true, allow_unrelated_failures: false },
     });
     expect(profiles['dotnet-xunit'].exercised).toBe(false);
+  });
+  it('runs real duplicate-named Vitest tests without losing RED or baseline verdicts', async () => {
+    const root = await fixture();
+    await writeFile(
+      path.join(root, 'case.test.js'),
+      'it.each([1,1])("same %s",()=>expect(1).toBe(1));it("rule-a",()=>expect(0).toBe(1));'
+    );
+    const red = await runTarget({ target: target(), cwd: root, phase: 'red' });
+    expect(red.complete).toBe(true);
+    expect(red.tests.filter(({ name }) => name === 'same 1')).toHaveLength(2);
+    expect(judgeRed(red, [binding]).status).toBe('RED');
+
+    await writeFile(
+      path.join(root, 'case.test.js'),
+      'it.each([1,1])("same %s",()=>expect(1).toBe(1));it("rule-a",()=>expect(1).toBe(1));'
+    );
+    const baseline = await runTarget({ target: target(), cwd: root, phase: 'baseline' });
+    expect(baseline.complete).toBe(true);
+    expect(baseline.tests.filter(({ name }) => name === 'same 1')).toHaveLength(2);
+    expect(judgeGreen(baseline, [binding]).status).toBe('GREEN');
   });
   it.each([
     ['pass', 'it("rule-a",()=>expect(1).toBe(1));', 'INVALID_RED', 'GREEN'],
