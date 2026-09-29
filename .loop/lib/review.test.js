@@ -36,7 +36,7 @@ const review = (overrides = {}) => ({
     status: 'completed',
     messages: [JSON.stringify([])],
     reportedWrites: [],
-    toolRequests: [],
+    toolRequests: [viewed('spec/x.html')],
     ...overrides,
   },
   violations: [],
@@ -47,6 +47,7 @@ const request = () => ({
   evidence: { bindings: [], red: { complete: true }, green: { complete: true } },
   delta: { changes: [], bytes: Buffer.alloc(0) },
   standards: approval,
+  worktree: reviewerWorktree,
 });
 const repositoryRequest = () => ({ ...request(), standards: repositoryStandards, worktree: reviewerWorktree });
 
@@ -166,9 +167,69 @@ describe('standards resolution', () => {
 });
 
 describe('independent reviewer boundary', () => {
+  it('accepts a reviewer that opened the spec and every resolved repository standard', async () => {
+    const toolRequests = [
+      viewed(path.join(reviewerWorktree, 'spec/x.html')),
+      viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+      viewed(path.join(reviewerWorktree, 'CONTRIBUTING.md')),
+    ];
+    expect(await reviewTask(repositoryRequest(), { review: async () => review({ toolRequests }) })).toEqual([]);
+  });
+
+  it('rejects a reviewer that opened both standards but not the spec', async () => {
+    const toolRequests = [
+      viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+      viewed(path.join(reviewerWorktree, 'CONTRIBUTING.md')),
+    ];
+    await expect(reviewTask(repositoryRequest(), { review: async () => review({ toolRequests }) })).rejects.toThrow(
+      /incomplete review evidence.*spec\/x\.html/i
+    );
+  });
+
+  it.each([
+    ['a similarly named file outside the review worktree', viewed(path.resolve(reviewerWorktree, '..', 'spec/x.html'))],
+    ['a similarly named nested file', viewed(path.join(reviewerWorktree, 'other/spec/x.html'))],
+    ['a grep of the spec', { name: 'grep', arguments: { path: path.join(reviewerWorktree, 'spec/x.html') } }],
+    ['a view without path arguments', { name: 'view', arguments: {} }],
+    ['a view with null arguments', { name: 'view', arguments: null }],
+    ['a view with a non-string path', { name: 'view', arguments: { path: 42 } }],
+  ])('does not count %s as an opened spec', async (_, request) => {
+    const toolRequests = [
+      viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+      viewed(path.join(reviewerWorktree, 'CONTRIBUTING.md')),
+      request,
+    ];
+    await expect(reviewTask(repositoryRequest(), { review: async () => review({ toolRequests }) })).rejects.toThrow(
+      /incomplete review evidence.*spec\/x\.html/i
+    );
+  });
+
+  it('requires a spec read even when no repository standards are resolved', async () => {
+    await expect(reviewTask(request(), { review: async () => review({ toolRequests: [] }) })).rejects.toThrow(
+      /incomplete review evidence.*spec\/x\.html/i
+    );
+  });
+
+  it('still rejects missing standards after opening the spec', async () => {
+    const toolRequests = [
+      viewed(path.join(reviewerWorktree, 'spec/x.html')),
+      viewed(path.join(reviewerWorktree, '.github/copilot-instructions.md')),
+    ];
+    await expect(reviewTask(repositoryRequest(), { review: async () => review({ toolRequests }) })).rejects.toThrow(
+      /incomplete review evidence.*CONTRIBUTING\.md/i
+    );
+  });
+
+  it('requires the reviewer worktree root to verify a spec read', async () => {
+    await expect(reviewTask({ ...request(), worktree: undefined }, { review: async () => review() })).rejects.toThrow(
+      /review worktree/i
+    );
+  });
+
   it('accepts findings after opening every resolved repository standard in the review worktree', async () => {
     const outcome = review({
       toolRequests: [
+        viewed('spec/x.html'),
         viewed(path.join(reviewerWorktree, '.github', 'copilot-instructions.md')),
         viewed(path.join(reviewerWorktree, 'CONTRIBUTING.md')),
       ],
@@ -180,7 +241,7 @@ describe('independent reviewer boundary', () => {
     const contributing = path.join(reviewerWorktree, 'CONTRIBUTING.md');
     const alias = process.platform === 'win32' ? contributing.replaceAll('\\', '/').toUpperCase() : contributing;
     const outcome = review({
-      toolRequests: [viewed('.github/copilot-instructions.md'), viewed(alias)],
+      toolRequests: [viewed('spec/x.html'), viewed('.github/copilot-instructions.md'), viewed(alias)],
     });
     expect(await reviewTask(repositoryRequest(), { review: async () => outcome })).toEqual([]);
   });
@@ -292,7 +353,13 @@ describe('independent reviewer boundary', () => {
     // * ASSERT
     expect(accepted).toEqual(findings);
     expect(Object.isFrozen(accepted[0].criteria)).toBe(true);
-    expect(ports.review).toHaveBeenCalledWith(input);
+    expect(ports.review).toHaveBeenCalledWith({
+      task: input.task,
+      index: input.index,
+      evidence: input.evidence,
+      delta: input.delta,
+      standards: input.standards,
+    });
     expect(routeFindings(accepted)).toBe('test');
   });
 
@@ -312,6 +379,7 @@ describe('independent reviewer boundary', () => {
       },
       diagnostics: [],
       toolRequests: [
+        { name: 'view', arguments: { path: 'spec/x.html' } },
         { name: 'view', arguments: { path: '.loop/task-context.json' } },
         { name: 'view', arguments: { path: 'src/a.js' } },
         { name: 'view', arguments: { path: 'src/a.test.js' } },

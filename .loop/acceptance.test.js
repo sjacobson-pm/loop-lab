@@ -102,7 +102,14 @@ async function runFixture({ root, remote, events, driftRemote = false }) {
     expect(leg).toBe('review');
     expect(await readFile(path.join(worktree, 'src/A.js'), 'utf8')).toBe('one');
     expect(JSON.parse(await readFile(path.join(worktree, binding.file), 'utf8'))).toEqual(binding);
-    return { ...completed, reportedWrites: [], toolRequests: [], messages: ['[]'] };
+    const specFile = path.join(worktree, 'spec/x.html');
+    expect(await readFile(specFile, 'utf8')).toContain('rule-a');
+    return {
+      ...completed,
+      reportedWrites: [],
+      toolRequests: [{ name: 'view', arguments: { path: specFile } }],
+      messages: ['[]'],
+    };
   };
   const runner = async ({ cwd, phase }) => {
     events.push(phase);

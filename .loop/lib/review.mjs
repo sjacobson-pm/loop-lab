@@ -130,24 +130,25 @@ export async function reviewTask({ task, index, evidence, delta, standards, work
   )
     throw new Error('Reviewer attempted to write or returned incomplete read-only evidence.');
   const repository = standards.references.filter(({ kind }) => kind === 'repository');
-  if (repository.length) {
-    if (typeof worktree !== 'string' || !path.isAbsolute(worktree))
-      throw new Error('Review worktree is required to verify repository standard reads.');
-    const identity = (file) => {
-      const absolute = path.resolve(worktree, file);
-      return process.platform === 'win32' ? absolute.toLowerCase() : absolute;
-    };
-    const reads = new Set(
-      result.outcome.toolRequests
-        .filter((request) => request.name === 'view' && typeof request.arguments?.path === 'string')
-        .map((request) => identity(request.arguments.path))
+  if (typeof worktree !== 'string' || !path.isAbsolute(worktree))
+    throw new Error('Review worktree is required to verify repository standard and spec reads.');
+  validateRelativePath(index.spec_path);
+  const identity = (file) => {
+    const absolute = path.resolve(worktree, file);
+    return process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+  };
+  const reads = new Set(
+    result.outcome.toolRequests
+      .filter((request) => request.name === 'view' && typeof request.arguments?.path === 'string')
+      .map((request) => identity(request.arguments.path))
+  );
+  const missing = repository.filter(({ id }) => !reads.has(identity(id)));
+  if (missing.length)
+    throw new Error(
+      `Incomplete review evidence: resolved repository standards not opened: ${missing.map(({ id }) => id).join(', ')}.`
     );
-    const missing = repository.filter(({ id }) => !reads.has(identity(id)));
-    if (missing.length)
-      throw new Error(
-        `Incomplete review evidence: resolved repository standards not opened: ${missing.map(({ id }) => id).join(', ')}.`
-      );
-  }
+  if (!reads.has(identity(index.spec_path)))
+    throw new Error(`Incomplete review evidence: cited spec not opened: ${index.spec_path}.`);
   if (!Array.isArray(result.outcome.messages) || result.outcome.messages.length === 0)
     throw new Error('Reviewer must return a final JSON findings array.');
   let findings;

@@ -69,7 +69,9 @@ async function repository({ clean = false, generated = false } = {}) {
     .trim();
   execFileSync('git', ['-C', root, 'update-ref', 'HEAD', oid]);
   await mkdir(path.join(root, 'src'));
+  await mkdir(path.join(root, 'spec'));
   for (const task of tasks) await writeFile(path.join(root, `src/${task.id}.js`), 'zero');
+  await writeFile(path.join(root, 'spec/x.html'), '<p id="A">Rule A</p><p id="B">Rule B</p>');
   await writeFile(path.join(root, '.gitignore'), 'node_modules/\n');
   execFileSync('git', ['-C', root, 'add', '.']);
   if (clean) {
@@ -92,12 +94,14 @@ async function repository({ clean = false, generated = false } = {}) {
 function adapters() {
   const calls = [];
   const agent = async ({ worktree, leg }) => {
-    const { task } = JSON.parse(await readFile(path.join(worktree, '.loop/task-context.json'), 'utf8'));
+    const { task, index } = JSON.parse(await readFile(path.join(worktree, '.loop/task-context.json'), 'utf8'));
     calls.push({ worktree, leg, task: task.id });
     if (leg === 'review') {
       expect(await readFile(path.join(worktree, `src/${task.id}.js`), 'utf8')).toBe('one');
       expect(await readFile(path.join(worktree, `src/${task.id}.test.js`), 'utf8')).toContain('rule');
       const { standards } = JSON.parse(await readFile(path.join(worktree, '.loop/task-context.json'), 'utf8'));
+      const specFile = path.join(worktree, index.spec_path);
+      await readFile(specFile, 'utf8');
       const toolRequests = await Promise.all(
         standards.references
           .filter(({ kind }) => kind === 'repository')
@@ -107,7 +111,12 @@ function adapters() {
             return { name: 'view', arguments: { path: file } };
           })
       );
-      return { status: 'completed', reportedWrites: [], toolRequests, messages: ['[]'] };
+      return {
+        status: 'completed',
+        reportedWrites: [],
+        toolRequests: [{ name: 'view', arguments: { path: specFile } }, ...toolRequests],
+        messages: ['[]'],
+      };
     }
     const file = `src/${task.id}.${leg === 'test' ? 'test.js' : 'js'}`;
     const binding = { id: `${file}::rule ${task.id}`, file, name: `rule ${task.id}`, criteria: task.criteria };
