@@ -56,7 +56,7 @@ const target = {
   },
 };
 const index = { spec_path: 'spec/x.html', criteria: tasks.map((task) => ({ anchor: task.criteria[0] })), context: [] };
-async function repository({ clean = false, generated = false } = {}) {
+async function repository({ clean = false, generated = false, preexistingTest = false } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'loop-execution-'));
   roots.push(root);
   execFileSync('git', ['init', '--quiet', root]);
@@ -71,6 +71,18 @@ async function repository({ clean = false, generated = false } = {}) {
   await mkdir(path.join(root, 'src'));
   await mkdir(path.join(root, 'spec'));
   for (const task of tasks) await writeFile(path.join(root, `src/${task.id}.js`), 'zero');
+  if (preexistingTest) {
+    const task = tasks[0];
+    await writeFile(
+      path.join(root, `src/${task.id}.test.js`),
+      JSON.stringify({
+        id: `src/${task.id}.test.js::rule ${task.id}`,
+        file: `src/${task.id}.test.js`,
+        name: `rule ${task.id}`,
+        criteria: task.criteria,
+      })
+    );
+  }
   await writeFile(path.join(root, 'spec/x.html'), '<p id="A">Rule A</p><p id="B">Rule B</p>');
   await writeFile(path.join(root, '.gitignore'), 'node_modules/\n');
   execFileSync('git', ['-C', root, 'add', '.']);
@@ -147,8 +159,8 @@ function adapters() {
   };
   return { agent, runner, calls };
 }
-async function setup({ clean = false, generated = false, ...overrides } = {}) {
-  const root = await repository({ clean, generated });
+async function setup({ clean = false, generated = false, preexistingTest = false, ...overrides } = {}) {
+  const root = await repository({ clean, generated, preexistingTest });
   const ports = adapters();
   const execution = await createExecution({ root, target, index, ...ports, ...overrides });
   executions.push(execution);
@@ -633,6 +645,14 @@ describe('isolated task execution adapters', { timeout: 30_000 }, () => {
         if (request.leg === 'test') {
           expect(request.profile).toEqual({ model: 'fixture-profile' });
           if (tests++ === 0) outcome.messages = ['not JSON'];
+          else
+            await writeFile(
+              path.join(request.worktree, 'src/A.test.js'),
+              JSON.stringify({
+                ...JSON.parse(await readFile(path.join(request.worktree, 'src/A.test.js'), 'utf8')),
+                note: 'repaired assertion',
+              })
+            );
         }
         return outcome;
       },
@@ -775,6 +795,106 @@ describe('isolated task execution adapters', { timeout: 30_000 }, () => {
     // * ACT / ASSERT
     const task = { ...tasks[0], files_modified: [...tasks[0].files_modified, 'tests/support.js'] };
     expect((await execution.runTask(task)).status).toBe('ready');
+  });
+  it('rejects bindings to a preexisting test file the test author did not change', async () => {
+    const normal = adapters();
+    const { execution } = await setup({
+      preexistingTest: true,
+      runner: async (request) =>
+        request.phase === 'baseline'
+          ? {
+              exitCode: 0,
+              complete: true,
+              errors: [],
+              tests: [
+                {
+                  id: 'baseline::healthy',
+                  file: 'baseline',
+                  name: 'healthy',
+                  status: 'passed',
+                  failureKind: null,
+                  message: '',
+                },
+              ],
+            }
+          : normal.runner(request),
+      agent: async (request) => {
+        if (request.leg !== 'test') return normal.agent(request);
+        const binding = JSON.parse(await readFile(path.join(request.worktree, 'src/A.test.js'), 'utf8'));
+        return { status: 'completed', reportedWrites: [], messages: [JSON.stringify([binding])] };
+      },
+    });
+    const result = await execution.runTask(tasks[0], { maxRepairs: 0 });
+    expect(result.status).toBe('parked');
+    expect(result.findings[0].message).toContain('src/A.test.js');
+    expect(result.findings[0].message).toContain('spec/x.html#A');
+    expect(result.evidence.history.map(({ phase }) => phase)).toEqual(['baseline']);
+  });
+  it('parks with actionable test-file evidence when the audited after-snapshot is unavailable', async () => {
+    const actual = await vi.importActual('./lib/workspace.mjs');
+    vi.mocked(auditWorkspaceDetails).mockImplementation(async (...args) => {
+      if (args[2].leg === 'test')
+        return {
+          after: null,
+          violations: [{ code: 'incomplete_evidence', path: null, message: 'Inventory unavailable' }],
+        };
+      return actual.auditWorkspaceDetails(...args);
+    });
+    try {
+      const { execution } = await setup();
+      const result = await execution.runTask(tasks[0]);
+      expect(result.status).toBe('parked');
+      expect(result.evidence.audits[0].violations).toContainEqual({
+        code: 'incomplete_evidence',
+        path: null,
+        message: 'Inventory unavailable',
+      });
+      expect(result.evidence.diagnostics.map(({ message }) => message).join(' ')).toContain(
+        'Missing audited test-file change evidence'
+      );
+      expect(result.evidence.history.map(({ phase }) => phase)).toEqual(['baseline']);
+    } finally {
+      vi.mocked(auditWorkspaceDetails).mockImplementation(actual.auditWorkspaceDetails);
+    }
+  });
+  it('authorizes RED after the test author changes a preexisting declared test file', async () => {
+    const normal = adapters();
+    const { execution } = await setup({
+      preexistingTest: true,
+      runner: async (request) =>
+        request.phase === 'baseline'
+          ? {
+              exitCode: 0,
+              complete: true,
+              errors: [],
+              tests: [
+                {
+                  id: 'baseline::healthy',
+                  file: 'baseline',
+                  name: 'healthy',
+                  status: 'passed',
+                  failureKind: null,
+                  message: '',
+                },
+              ],
+            }
+          : normal.runner(request),
+      agent: async (request) => {
+        const outcome = await normal.agent(request);
+        if (request.leg === 'test')
+          await writeFile(
+            path.join(request.worktree, 'src/A.test.js'),
+            JSON.stringify({
+              ...JSON.parse(await readFile(path.join(request.worktree, 'src/A.test.js'), 'utf8')),
+              note: 'new assertion',
+            })
+          );
+        return outcome;
+      },
+    });
+    const result = await execution.runTask(tasks[0]);
+    expect(result.status).toBe('ready');
+    expect(result.evidence.history.map(({ phase }) => phase)).toEqual(['baseline', 'red', 'green']);
   });
   it('creates declared parent directories before invoking tool-only authors', async () => {
     // * ARRANGE

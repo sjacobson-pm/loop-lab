@@ -67,6 +67,41 @@ describe('target-neutral verdicts', () => {
     expect(judgeRed(green(), [binding]).status).toBe('INVALID_RED');
     expect(judgeGreen(red(), [binding]).status).toBe('INVALID_GREEN');
   });
+  it('identifies a bound test that passed RED instead of reporting a normal exit as abnormal', () => {
+    const verdict = judgeRed(green(), [binding]);
+    expect(verdict.status).toBe('INVALID_RED');
+    expect(verdict.reasons.join(' ')).toContain(binding.id);
+    expect(verdict.reasons.join(' ')).toContain(binding.criteria[0]);
+    expect(verdict.reasons.join(' ')).toMatch(/passed/i);
+    expect(verdict.reasons.join(' ')).not.toMatch(/did not exit normally/i);
+  });
+  it('accepts behavioral RED for the bound test while unrelated tests pass', () => {
+    const run = red();
+    run.tests.push({ ...green().tests[0], id: 'other::healthy', file: 'other', name: 'healthy' });
+    expect(judgeRed(run, [binding])).toEqual({ status: 'RED', reasons: [] });
+  });
+  it('names missing bound acceptance tests even when other tests pass', () => {
+    const run = green();
+    run.tests[0] = { ...run.tests[0], id: 'other::healthy', file: 'other', name: 'healthy' };
+    const verdict = judgeRed(run, [binding]);
+    expect(verdict.status).toBe('INVALID_RED');
+    expect(verdict.reasons.join(' ')).toContain(binding.id);
+    expect(verdict.reasons.join(' ')).toContain(binding.criteria[0]);
+    expect(verdict.reasons.join(' ')).toMatch(/not discovered|missing/i);
+  });
+  it('explains collection-only RED as missing behavioral assertion evidence', () => {
+    const run = {
+      exitCode: 1,
+      complete: true,
+      errors: [{ kind: 'collection', message: 'Cannot import source' }],
+      tests: [],
+    };
+    const verdict = judgeRed(run, [binding]);
+    expect(verdict.status).toBe('INVALID_RED');
+    expect(verdict.reasons.join(' ')).toContain(binding.id);
+    expect(verdict.reasons.join(' ')).toContain(binding.criteria[0]);
+    expect(verdict.reasons.join(' ')).toMatch(/collection|import/i);
+  });
 
   it.each([
     ['missing tests', (run) => (run.tests = [])],

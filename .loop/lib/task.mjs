@@ -2,6 +2,8 @@ import { judgeGreen, judgeRed, judgeSuite } from './results.mjs';
 import { MissingReviewReadsError, routeFindings, validateFindings } from './review.mjs';
 import { beginExecution, mergeUsage, nextRepair, resolveLimits } from './termination.mjs';
 
+const missingTestFileEvidence = 'Missing audited test-file change evidence. Modify every declared test file.';
+
 /** Test authors identify tests and anchors; they cannot return a verdict or claim source ownership. */
 export function validateBindings(bindings, task, testFiles) {
   if (!Array.isArray(bindings) || !bindings.length || !Array.isArray(testFiles))
@@ -104,6 +106,8 @@ export async function runTask({ task, target, baseline, index, standards, maxRep
     evidence.audits.push({ leg, violations });
     if (violations.length) {
       evidence.diagnostics.push({ phase: leg, message: `Write audit rejected: ${JSON.stringify(violations)}` });
+      if (leg === 'test' && !Array.isArray(result.changedTestFiles))
+        evidence.diagnostics.push({ phase: leg, message: missingTestFileEvidence });
       if (violations.every(({ code }) => code === 'incomplete_evidence')) return { rejected: outcome('parked') };
       return {
         rejected: outcome('parked', [
@@ -127,6 +131,16 @@ export async function runTask({ task, target, baseline, index, standards, maxRep
       try {
         if (authored.result.bindingError) throw new Error(authored.result.bindingError);
         evidence.bindings = validateBindings(authored.result.bindings, task, authored.result.testFiles);
+        if (!Array.isArray(authored.result.changedTestFiles)) throw new Error(missingTestFileEvidence);
+        for (const file of authored.result.testFiles) {
+          if (!authored.result.changedTestFiles.includes(file)) {
+            const fileBindings = evidence.bindings.filter((binding) => binding.file === file);
+            const anchors = fileBindings.flatMap((binding) => binding.criteria);
+            throw new Error(
+              `Modify declared test file ${file}${fileBindings.length ? ` (${fileBindings.map(({ id }) => id).join(', ')})` : ''} for criterion ${[...new Set(anchors.length ? anchors : task.criteria)].join(', ')} and write a behaviorally failing acceptance assertion; unchanged test files do not establish RED.`
+            );
+          }
+        }
       } catch (error) {
         feedback = error.message;
         evidence.diagnostics.push({ phase: 'bindings', message: feedback });

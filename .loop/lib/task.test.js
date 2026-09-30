@@ -35,7 +35,12 @@ function fixture() {
     }),
     test: vi.fn(async () => {
       events.push('test');
-      return { outcome: { status: 'completed' }, bindings: [binding], testFiles: [binding.file] };
+      return {
+        outcome: { status: 'completed' },
+        bindings: [binding],
+        testFiles: [binding.file],
+        changedTestFiles: [binding.file],
+      };
     }),
     audit: vi.fn(async (leg) => {
       events.push(`audit-${leg}`);
@@ -592,6 +597,80 @@ describe('task RED/GREEN sequence', () => {
     expect(ports.green).not.toHaveBeenCalled();
     expect(result.findings[0]).toMatchObject({ code: 'unsupported_assertion', fault_domain: 'test' });
   });
+  it('repairs an unchanged declared test file before freezing tests or running RED', async () => {
+    const { ports } = fixture();
+    const initial = ports.test.getMockImplementation();
+    ports.test
+      .mockImplementationOnce(async (input) => ({ ...(await initial(input)), changedTestFiles: [] }))
+      .mockImplementationOnce(async (input) => {
+        expect(input.feedback).toContain(binding.file);
+        expect(input.feedback).toContain(task.criteria[0]);
+        expect(input.feedback).toMatch(/modify|change/i);
+        return { ...(await initial(input)), changedTestFiles: [binding.file] };
+      });
+    const result = await runTask({ ...request(), maxRepairs: 1 }, ports);
+    expect(result.status).toBe('ready');
+    expect(ports.test).toHaveBeenCalledTimes(2);
+    expect(ports.freezeTests).toHaveBeenCalledTimes(1);
+    expect(ports.red).toHaveBeenCalledTimes(1);
+    expect(ports.implement).toHaveBeenCalledTimes(1);
+  });
+  it('parks without RED when the test author repeatedly returns unchanged files with bindings', async () => {
+    const { ports } = fixture();
+    const initial = ports.test.getMockImplementation();
+    ports.test.mockImplementation(async (input) => ({ ...(await initial(input)), changedTestFiles: [] }));
+    const result = await runTask({ ...request(), maxRepairs: 1 }, ports);
+    expect(result.status).toBe('parked');
+    expect(result.findings[0].message).toContain(binding.file);
+    expect(result.findings[0].message).toContain(binding.id);
+    expect(result.findings[0].message).toContain(task.criteria[0]);
+    expect(ports.red).not.toHaveBeenCalled();
+    expect(ports.implement).not.toHaveBeenCalled();
+  });
+  it('repairs when audited test-file change evidence is missing', async () => {
+    const { ports } = fixture();
+    const initial = ports.test.getMockImplementation();
+    ports.test.mockImplementation(async (input) => ({ ...(await initial(input)), changedTestFiles: undefined }));
+    const result = await runTask({ ...request(), maxRepairs: 0 }, ports);
+    expect(result.status).toBe('parked');
+    expect(result.findings[0].message).toMatch(/missing audited test-file change evidence/i);
+    expect(ports.red).not.toHaveBeenCalled();
+  });
+  it('requires change evidence for supporting declared test files without bindings', async () => {
+    const { ports } = fixture();
+    const initial = ports.test.getMockImplementation();
+    ports.test.mockImplementation(async (input) => ({
+      ...(await initial(input)),
+      testFiles: [binding.file, 'src/support.test.js'],
+      changedTestFiles: [binding.file],
+    }));
+    const result = await runTask(
+      {
+        ...request(),
+        task: { ...task, files_modified: [...task.files_modified, 'src/support.test.js'] },
+        maxRepairs: 0,
+      },
+      ports
+    );
+    expect(result.status).toBe('parked');
+    expect(result.findings[0].message).toContain('src/support.test.js');
+    expect(ports.red).not.toHaveBeenCalled();
+  });
+  it('repairs a passing bound RED test using its identity and criterion', async () => {
+    const { ports } = fixture();
+    ports.red.mockResolvedValueOnce(green());
+    const initial = ports.test.getMockImplementation();
+    ports.test.mockImplementationOnce(initial).mockImplementationOnce(async (input) => {
+      expect(input.feedback).toContain(binding.id);
+      expect(input.feedback).toContain(binding.criteria[0]);
+      expect(input.feedback).toMatch(/passed RED/);
+      return initial(input);
+    });
+    const result = await runTask({ ...request(), maxRepairs: 1 }, ports);
+    expect(result.status).toBe('ready');
+    expect(ports.test).toHaveBeenCalledTimes(2);
+    expect(ports.implement).toHaveBeenCalledTimes(1);
+  });
   it('repairs GREEN without changing the immutable test version or reauthoring tests', async () => {
     // * ARRANGE
     const { ports } = fixture();
@@ -769,6 +848,7 @@ describe('task RED/GREEN sequence', () => {
       outcome: { status: 'completed', usage: usage(0.25) },
       bindings: [binding],
       testFiles: [binding.file],
+      changedTestFiles: [binding.file],
     });
     ports.implement.mockResolvedValue({ outcome: { status: 'completed', usage: usage(0.5) } });
     ports.review.mockImplementation(async ({ reportUsage }) => {

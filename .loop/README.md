@@ -171,7 +171,12 @@ bindings are permitted; each bound test must occur exactly once. Baseline and
 integration runs still require every occurrence to pass. Named RED requires assertion
 comparisons from a recognized test-body runner boundary, not merely an
 `AssertionError` string. Setup, returned cleanup and `onTestFinished` assertions
-are not valid RED. Unknown provenance fails closed. These contracts were
+are not valid RED. Each declared test file, including supporting test files without
+bindings, must be created or modified in the audited test-author leg before RED
+runs. Missing or passing bound tests, collection/import-only failures, and
+unchanged test files receive actionable feedback through the existing bounded
+test-author repair loop. Unrelated tests may pass during RED; each criterion-bound
+test must fail behaviorally. Unknown provenance fails closed. These contracts were
 exercised with app Vitest 3.2.4 and isolated Vitest 3.2.7; unfamiliar runner shapes
 require adapter validation, not a relaxed verdict.
 

@@ -221,7 +221,13 @@ export async function createExecution({
             bindingError = `Test author returned invalid binding JSON: ${error.message}`;
           }
         }
-        return { outcome, bindings, bindingError, testFiles };
+        const changedTestFiles =
+          leg === 'test' && audit.after
+            ? testFiles.filter(
+                (file) => Object.hasOwn(audit.after.files, file) && before.files[file] !== audit.after.files[file]
+              )
+            : undefined;
+        return { outcome, bindings, bindingError, testFiles, changedTestFiles };
       };
       const replay = async (phase, token) => {
         const testPatch = tokens.get(token);
