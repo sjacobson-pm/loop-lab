@@ -22,10 +22,12 @@ function argumentsFor({ prompt, worktree, leg, deniedPaths, profile }) {
     !Array.isArray(deniedPaths) ||
     deniedPaths.some(
       (file) =>
-        !path.isAbsolute(file) || /[()*?"]/.test(file) || [...file].some((character) => character.codePointAt(0) < 32)
+        (!path.isAbsolute(file) && (!text(file) || file === '.' || file === '..' || /[\\/:]/.test(file))) ||
+        /[()*?"]/.test(file) ||
+        [...file].some((character) => character.codePointAt(0) < 32)
     )
   ) {
-    throw new Error('Deny paths must be absolute, literal and representable in write(path) syntax');
+    throw new Error('Deny paths must be absolute paths or literal basenames representable in write(path) syntax');
   }
   const argv = [
     '-p',

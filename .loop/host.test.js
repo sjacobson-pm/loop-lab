@@ -238,7 +238,8 @@ describe('runAgent', () => {
     { prompt: '' },
     { leg: 'unrecognized' },
     { timeoutMs: 0 },
-    { deniedPaths: ['relative'] },
+    { deniedPaths: ['nested/relative'] },
+    { deniedPaths: ['../relative'] },
     { deniedPaths: [path.resolve('src/(ambiguous).js')] },
     { deniedPaths: [path.resolve('src/star*.js')] },
     { profile: { model: '' } },
@@ -248,6 +249,14 @@ describe('runAgent', () => {
     // * ACT / ASSERT
     await expect(runAgent(request(override), { spawn })).rejects.toThrow();
     expect(spawn).not.toHaveBeenCalled();
+  });
+  it('dispatches literal relative basename denials without changing absolute file rules', async () => {
+    const spawn = launcher([encode([terminal()])]);
+    await runAgent(request({ deniedPaths: ['package.json', path.resolve('spec', 'x.html')] }), { spawn });
+    expect(spawn).toHaveBeenCalledTimes(1);
+    const argv = spawn.mock.calls[0][1];
+    expect(argv).toContain('write(package.json)');
+    expect(argv).toContain(`write(${path.resolve('spec', 'x.html')})`);
   });
   it('rejects command lines too large for the installed Windows process boundary before spawning', async () => {
     // * ARRANGE

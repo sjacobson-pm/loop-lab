@@ -79,6 +79,23 @@ Run from the repository worktree in an attended terminal:
 node .loop\run.mjs owner/repo 42 spec/example.html Rule --model gpt-5-mini --reasoning-effort low
 ```
 
+To keep an attended stdout transcript outside the clean checkout, pass an
+absolute, new log file under an existing external directory. For Git Bash on
+Windows:
+
+```bash
+mkdir -p "$HOME/loop-logs"
+node '.loop\run.mjs' sjacobson-pm/loop-lab 17 spec/session-readouts-acceptance.html Rule \
+  --model gpt-5-mini --reasoning-effort low \
+  --log-file "$(cygpath -w "$HOME/loop-logs/issue-17-$(date +%Y%m%d%H%M%S).log")"
+```
+
+The CLI rejects checkout paths (including external aliases that resolve into
+the checkout), relative paths, missing parent directories, and existing files
+before retrieving the issue. Stdout is written to both the terminal and log,
+including Gate prompts, attended TTY answers, usage barriers, failures, and the
+final result. It does not capture stderr or agent-private tool output.
+
 Help and invalid-usage paths do not import the execution graph or `jsdom`.
 Execution imports adapters only when needed; import failures are reported as
 run failures with a nonzero exit, not hidden by the help fast path.
@@ -304,10 +321,20 @@ probe. It is not wired or enabled, and is not a premium-request cap.
 
 ## Three fence layers
 
-1. **Exact preventive denies.** The shared Git `test_pathspecs` classifies task
+1. **Preventive denials.** The shared Git `test_pathspecs` classifies task
    declarations. Test authors deny declared source; implementers deny declared
-   tests; known harness/spec/config/evidence paths are denied as exact absolute
-   paths. Decomposition may produce only its exact issue-plan file.
+   tests. Known `.loop/`, `.github/`, `spec/`, and `docs/design/` files retain
+   exact absolute denials, including the task context and cited spec: the
+   installed CLI has no glob or directory-prefix `write()` rule. Root-level
+   protected files and matching `package.json`, `package-lock.json`, and
+   `*config.[cm]?[jt]s` files instead yield one literal relative basename
+   denial per distinct basename found in the captured inventory. `copilot help
+permissions` in CLI 1.0.90-5 documents that relative `write(path)` matches
+   trailing path components, and that denials override all allowances. These
+   rules are deliberately broader than the old per-file denials; a declared
+   file with a colliding basename fails clearly before dispatch rather than
+   being silently denied. The 32,000-character argv guard remains in place.
+   Decomposition may produce only its exact issue-plan file.
 2. **Optional shell hardening.** An isolated MXC probe failed on this host:
    PowerShell requires Process Security Environment 1.1 filesystem enumeration,
    which this Windows build does not report. No global settings were changed and

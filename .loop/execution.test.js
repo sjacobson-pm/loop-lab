@@ -643,6 +643,31 @@ describe('isolated task execution adapters', { timeout: 30_000 }, () => {
     expect(result.evidence.legs).toHaveLength(3);
     expect(result.evidence.diagnostics[0].message).toMatch(/invalid binding JSON/);
   });
+  it('passes installed dependency package metadata as one basename deny to the test author', async () => {
+    const normal = adapters();
+    let received;
+    const { execution } = await setup({
+      runner: async (input) => {
+        if (input.phase === 'baseline') {
+          const dependency = path.join(input.cwd, 'node_modules', 'fixture-package');
+          await mkdir(dependency, { recursive: true });
+          await writeFile(path.join(dependency, 'package.json'), '{}');
+        }
+        return normal.runner(input);
+      },
+      agent: async (input) => {
+        if (input.leg === 'test') received = input;
+        return normal.agent(input);
+      },
+    });
+
+    expect((await execution.runTask(tasks[0])).status).toBe('ready');
+    expect(received.deniedPaths).toContain('package.json');
+    expect(received.deniedPaths).not.toContain(
+      path.join(received.worktree, 'node_modules', 'fixture-package', 'package.json')
+    );
+    expect(received.deniedPaths).toContain(path.join(received.worktree, 'spec', 'x.html'));
+  });
   it.each(['replay', 'candidate', 'integration'])(
     'rejects a failed %s suite without accepting changes',
     async (kind) => {

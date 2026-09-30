@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { createLegWorktree } from './attended.mjs';
 import { runAgent } from './host.mjs';
+import { collapseTaskDenyPaths, protectedTaskPath } from './lib/fences.mjs';
 import { capturePatch, applyPatch } from './lib/patches.mjs';
 import { validateRelativePath } from './lib/plan.mjs';
 import { judgeSuite } from './lib/results.mjs';
@@ -25,11 +26,6 @@ const git = async (root, args) =>
       env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
     })
   ).stdout.trim();
-const protectedPath = (file, task) =>
-  /^(\.loop\/|\.github\/|spec\/|docs\/design\/)/.test(file) ||
-  (!file.includes('/') && !task.files_modified.includes(file)) ||
-  /(^|\/)(package(-lock)?\.json|[^/]*config\.[cm]?[jt]s)$/.test(file);
-
 function unchangedInputs(before, after) {
   if (before.head !== after.head || before.config !== after.config) return false;
   const visible = new Set([
@@ -162,7 +158,7 @@ export async function createExecution({
           ...new Set([
             contextPath,
             index.spec_path,
-            ...Object.keys(before.files).filter((file) => protectedPath(file, task)),
+            ...Object.keys(before.files).filter((file) => protectedTaskPath(file, task.files_modified)),
           ]),
         ];
         const fence = await prepareFence({
@@ -184,7 +180,17 @@ export async function createExecution({
             worktree: tree.path,
             leg,
             prompt: `${template}\n\nRead harness input from ${contextPath}.`,
-            deniedPaths: [...fence.deniedPaths, path.join(tree.path, '.git')],
+            deniedPaths: [
+              ...collapseTaskDenyPaths({
+                root: tree.path,
+                protectedFiles,
+                deniedPaths: fence.deniedPaths,
+                declaredFiles: task.files_modified,
+                contextPath,
+                specPath: index.spec_path,
+              }),
+              path.join(tree.path, '.git'),
+            ],
             profile: profiles[leg] ?? {},
             signal,
           });

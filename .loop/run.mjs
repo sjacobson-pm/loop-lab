@@ -1,9 +1,34 @@
+import { closeSync, openSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 
 const usage =
-  'Usage: node .loop\\run.mjs <owner/repo> <issue> <spec-relative-path> <acceptance-kinds-comma-separated> --model <model> --reasoning-effort <level>\nAttended react-vitest loop: Gate 1, automated waves, then Gate 2. The human commits and pushes; the harness only confirms PRs.\n';
+  'Usage: node .loop\\run.mjs <owner/repo> <issue> <spec-relative-path> <acceptance-kinds-comma-separated> --model <model> --reasoning-effort <level> [--log-file <absolute-external-path>]\nAttended react-vitest loop: Gate 1, automated waves, then Gate 2. The human commits and pushes; the harness only confirms PRs.\n';
+
+function openLogFile(file, root) {
+  if (typeof file !== 'string' || !path.isAbsolute(file)) throw new Error('Log file path must be absolute.');
+  const checkout = realpathSync(root);
+  const inside = (candidate) => {
+    const relative = path.relative(checkout, candidate);
+    return (
+      relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+    );
+  };
+  if (inside(path.resolve(file))) throw new Error('Log file must be outside the checkout.');
+  let parent;
+  try {
+    parent = realpathSync(path.dirname(file));
+  } catch (error) {
+    throw new Error(`Cannot resolve log file parent: ${error.message}`, { cause: error });
+  }
+  if (inside(path.join(parent, path.basename(file)))) throw new Error('Log file must be outside the checkout.');
+  try {
+    return openSync(path.join(parent, path.basename(file)), 'wx', 0o600);
+  } catch (error) {
+    throw new Error(`Cannot create log file: ${error.message}`, { cause: error });
+  }
+}
 
 /** Command-line adapter for the attended two-gate loop. */
 export async function runCli(
@@ -11,7 +36,8 @@ export async function runCli(
   {
     input = process.stdin,
     output = process.stdout,
-    write = (text) => output.write(text),
+    write: writeOutput = (text) => output.write(text),
+    writeLog = writeFileSync,
     ask,
     prepare,
     run,
@@ -19,9 +45,13 @@ export async function runCli(
   } = {}
 ) {
   if (argv.length === 1 && argv[0] === '--help') {
-    write(usage);
+    writeOutput(usage);
     return 0;
   }
+  let write = writeOutput;
+  let terminalOutput = output;
+  let logDescriptor;
+  let logWriteFailed = false;
   let terminal;
   let code = 1;
   let premiumRequests = 0;
@@ -38,7 +68,7 @@ export async function runCli(
   process.once('SIGINT', cancel);
   try {
     if (
-      argv.length !== 8 ||
+      (argv.length !== 8 && argv.length !== 10) ||
       argv[4] !== '--model' ||
       typeof argv[5] !== 'string' ||
       !argv[5].trim() ||
@@ -46,9 +76,36 @@ export async function runCli(
       argv[6] !== '--reasoning-effort' ||
       typeof argv[7] !== 'string' ||
       !argv[7].trim() ||
-      argv[7].startsWith('--')
+      argv[7].startsWith('--') ||
+      (argv.length === 10 && argv[8] !== '--log-file')
     )
       throw new Error(usage);
+    if (argv.length === 10) {
+      logDescriptor = openLogFile(argv[9], process.cwd());
+      const record = (text) => {
+        try {
+          writeLog(logDescriptor, text);
+        } catch (error) {
+          logWriteFailed = true;
+          throw error;
+        }
+      };
+      write = (text) => {
+        record(text);
+        return writeOutput(text);
+      };
+      terminalOutput = new Proxy(output, {
+        get(target, property) {
+          if (property === 'write')
+            return (text, ...args) => {
+              record(text);
+              return target.write(text, ...args);
+            };
+          const value = Reflect.get(target, property, target);
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    }
     const [repository, number, specPath, kinds] = argv;
     const profile = { model: argv[5], reasoningEffort: argv[7] };
     const profiles = Object.fromEntries(['test', 'implement', 'review'].map((leg) => [leg, profile]));
@@ -56,7 +113,7 @@ export async function runCli(
     const issue = await readIssue(repository, Number(number));
     if (!ask) {
       if (!input.isTTY) throw new Error('Gate 1 and Gate 2 require an attended terminal');
-      terminal = createInterface({ input, output });
+      terminal = createInterface({ input, output: terminalOutput });
       terminal.on('SIGINT', cancel);
       ask = (question) => terminal.question(question, { signal: controller.signal });
     }
@@ -112,10 +169,11 @@ export async function runCli(
     write(`${JSON.stringify(result, null, 2)}\n`);
     code = ['stopped', 'pr-opened'].includes(result.status) ? 0 : 1;
   } catch (error) {
-    write(`Preparation failed: ${error.message}\n`);
+    (logWriteFailed ? writeOutput : write)(`Preparation failed: ${error.message}\n`);
   } finally {
     process.removeListener('SIGINT', cancel);
     terminal?.close();
+    if (logDescriptor !== undefined) closeSync(logDescriptor);
   }
   return code;
 }

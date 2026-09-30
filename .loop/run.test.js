@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { PassThrough } from 'node:stream';
 import { fileURLToPath } from 'node:url';
-import { copyFile, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -171,6 +171,156 @@ describe('attended CLI', () => {
     expect(code).toBe(0);
     expect(transcript).toContain('stopped');
     expect(input.listenerCount('data')).toBe(0);
+  });
+  it('tees Gate prompts, attended answers, wave usage and final result to an external log', async () => {
+    const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), 'loop-cli-log-')));
+    const logFile = path.join(directory, 'run.log');
+    const input = new PassThrough();
+    const output = new PassThrough();
+    input.isTTY = true;
+    output.isTTY = true;
+    output.columns = 100;
+    let transcript = '';
+    try {
+      output.on('data', (chunk) => {
+        const text = chunk.toString();
+        transcript += text;
+        if (text.includes('approve / revise / stop:')) queueMicrotask(() => input.write('approve\n'));
+        if (text.includes('publish / stop:')) queueMicrotask(() => input.write('stop\n'));
+      });
+      const code = await runCli([...pinnedArgs, '--log-file', logFile], {
+        input,
+        output,
+        issueReader: async () => ({}),
+        run: async ({ gate1, reportWave, gate2 }) => {
+          expect(await gate1({ usage: [{ name: 'premiumRequests', unit: 'premium-requests', value: 1 }] })).toEqual({
+            decision: 'approve',
+            feedback: '',
+          });
+          await reportWave({
+            index: 1,
+            status: 'ready',
+            usage: { counters: [], complete: true, missingExecutions: 0 },
+            agentExecutions: 0,
+          });
+          expect(await gate2({ groups: [] })).toEqual({ decision: 'stop' });
+          return { status: 'stopped' };
+        },
+      });
+      expect(code).toBe(0);
+      const saved = await readFile(logFile, 'utf8');
+      expect(saved).toBe(transcript);
+      expect(saved).toContain('approve / revise / stop:');
+      expect(saved).toContain('approve');
+      expect(saved).toContain('Wave 1 barrier');
+      expect(saved).toContain('publish / stop:');
+      expect(saved).toContain('stopped');
+      expect(saved).toMatch(/approve\r?\n/);
+      expect(saved).toMatch(/stop\r?\n/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+  it('refuses a log inside the checkout before issue retrieval and does not create it', async () => {
+    const logFile = path.join(process.cwd(), '.loop', 'do-not-create.log');
+    const issueReader = vi.fn();
+    let output = '';
+    const code = await runCli([...pinnedArgs, '--log-file', logFile], {
+      issueReader,
+      write: (text) => {
+        output += text;
+      },
+    });
+    expect(code).toBe(1);
+    expect(issueReader).not.toHaveBeenCalled();
+    expect(output).toMatch(/log.*outside.*checkout/i);
+    await expect(readFile(logFile)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+  it('refuses a relative log or an existing external file without overwriting it', async () => {
+    const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), 'loop-cli-log-')));
+    const logFile = path.join(directory, 'run.log');
+    const issueReader = vi.fn();
+    let output = '';
+    try {
+      await writeFile(logFile, 'original');
+      for (const pathValue of ['relative.log', logFile]) {
+        expect(
+          await runCli([...pinnedArgs, '--log-file', pathValue], {
+            issueReader,
+            write: (text) => {
+              output += text;
+            },
+          })
+        ).toBe(1);
+      }
+      expect(issueReader).not.toHaveBeenCalled();
+      expect(output).toMatch(/log file/i);
+      expect(await readFile(logFile, 'utf8')).toBe('original');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+  it('fails before issue retrieval when the external log parent does not exist', async () => {
+    const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), 'loop-cli-log-')));
+    const issueReader = vi.fn();
+    let output = '';
+    try {
+      expect(
+        await runCli([...pinnedArgs, '--log-file', path.join(directory, 'missing', 'run.log')], {
+          issueReader,
+          write: (text) => {
+            output += text;
+          },
+        })
+      ).toBe(1);
+      expect(issueReader).not.toHaveBeenCalled();
+      expect(output).toMatch(/resolve log file parent/i);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+  it('rejects an external parent alias that resolves into the checkout', async () => {
+    const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), 'loop-cli-log-')));
+    const alias = path.join(directory, 'alias');
+    const issueReader = vi.fn();
+    let output = '';
+    try {
+      await symlink(process.cwd(), alias, process.platform === 'win32' ? 'junction' : 'dir');
+      expect(
+        await runCli([...pinnedArgs, '--log-file', path.join(alias, 'run.log')], {
+          issueReader,
+          write: (text) => {
+            output += text;
+          },
+        })
+      ).toBe(1);
+      expect(issueReader).not.toHaveBeenCalled();
+      expect(output).toMatch(/log.*outside.*checkout/i);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+  it('stops rather than reporting a successful run when writing the log fails', async () => {
+    const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), 'loop-cli-log-')));
+    let output = '';
+    try {
+      const code = await runCli([...pinnedArgs, '--log-file', path.join(directory, 'run.log')], {
+        ask: async () => 'stop',
+        issueReader: async () => ({}),
+        write: (text) => {
+          output += text;
+        },
+        writeLog: () => {
+          throw new Error('disk full');
+        },
+        run: async () => ({ status: 'stopped' }),
+      });
+      expect(code).toBe(1);
+      expect(output).toContain('Preparation failed: disk full');
+      expect(await readFile(path.join(directory, 'run.log'), 'utf8')).toBe('');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
   it.each([
     ['help', ['--help'], 0, 'Gate 1'],
