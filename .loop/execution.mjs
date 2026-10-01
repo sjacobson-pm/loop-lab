@@ -174,12 +174,18 @@ export async function createExecution({
         );
         for (const file of permitted) await mkdir(path.dirname(path.join(tree.path, file)), { recursive: true });
         const template = await readFile(new URL(`./prompts/${leg}.md`, import.meta.url), 'utf8');
+        let prompt = `${template}\n\nRead harness input from ${contextPath}.`;
+        if (leg === 'test') {
+          prompt += `\n\nDeclared test files to write:\n${permitted.join('\n')}`;
+          if (typeof input.feedback === 'string' && input.feedback.trim())
+            prompt += `\n\nRepair feedback from the previous attempt:\n${input.feedback}`;
+        }
         let outcome;
         try {
           outcome = await agent({
             worktree: tree.path,
             leg,
-            prompt: `${template}\n\nRead harness input from ${contextPath}.`,
+            prompt,
             deniedPaths: [
               ...collapseTaskDenyPaths({
                 root: tree.path,

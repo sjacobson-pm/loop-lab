@@ -663,6 +663,50 @@ describe('isolated task execution adapters', { timeout: 30_000 }, () => {
     expect(result.evidence.legs).toHaveLength(3);
     expect(result.evidence.diagnostics[0].message).toMatch(/invalid binding JSON/);
   });
+  it('gives each declared test file and retry feedback to the test author before bindings', async () => {
+    const normal = adapters();
+    const prompts = [];
+    const task = { ...tasks[0], files_modified: [...tasks[0].files_modified, 'tests/support.js'] };
+    vi.mocked(taskController).mockImplementationOnce(async (input, ports) => {
+      await ports.test({ task: input.task, target: input.target, baseline: input.baseline, feedback: '' });
+      await ports.test({
+        task: input.task,
+        target: input.target,
+        baseline: input.baseline,
+        feedback: 'Modify tests/support.js for spec/x.html#A before returning bindings.',
+      });
+      return { status: 'parked' };
+    });
+    const { execution } = await setup({
+      target: { ...target, test_pathspecs: ['*.test.js', 'tests/**'] },
+      agent: async (request) => {
+        if (request.leg === 'test') {
+          prompts.push(request.prompt);
+          const support = path.join(request.worktree, 'tests/support.js');
+          await writeFile(support, 'support');
+          const outcome = await normal.agent(request);
+          outcome.reportedWrites.push(support);
+          return outcome;
+        }
+        return normal.agent(request);
+      },
+    });
+    expect((await execution.runTask(task)).status).toBe('parked');
+    expect(prompts).toHaveLength(2);
+    for (const prompt of prompts) {
+      expect(prompt).toContain('src/A.test.js');
+      expect(prompt).toContain('tests/support.js');
+      expect(prompt).not.toContain('src/A.js\n');
+      expect(prompt).toMatch(/(?:create|edit) tool/i);
+      expect(prompt).toMatch(/without writing.*(?:reject|fail)/i);
+      expect(prompt.indexOf('Read the harness input file')).toBeLessThan(prompt.indexOf('Read the original spec'));
+      expect(prompt.indexOf('Read the original spec')).toBeLessThan(prompt.indexOf('create or edit'));
+      expect(prompt.indexOf('create or edit')).toBeLessThan(prompt.indexOf('return ONLY a JSON array'));
+    }
+    expect(prompts[0]).not.toContain('Repair feedback from the previous attempt:');
+    expect(prompts[1]).toContain('Repair feedback from the previous attempt:');
+    expect(prompts[1]).toContain('Modify tests/support.js for spec/x.html#A before returning bindings.');
+  });
   it('passes installed dependency package metadata as one basename deny to the test author', async () => {
     const normal = adapters();
     let received;

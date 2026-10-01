@@ -176,7 +176,10 @@ bindings, must be created or modified in the audited test-author leg before RED
 runs. Missing or passing bound tests, collection/import-only failures, and
 unchanged test files receive actionable feedback through the existing bounded
 test-author repair loop. Unrelated tests may pass during RED; each criterion-bound
-test must fail behaviorally. Unknown provenance fails closed. These contracts were
+test must fail behaviorally. The test-author prompt orders spec reading before
+`create`/`edit` writes and names every harness-classified declared test file;
+nonempty retry feedback appears in both the prompt and harness input. Bindings
+are returned only after the writes. Unknown provenance fails closed. These contracts were
 exercised with app Vitest 3.2.4 and isolated Vitest 3.2.7; unfamiliar runner shapes
 require adapter validation, not a relaxed verdict.
 
